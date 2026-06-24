@@ -1,0 +1,346 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f2f9f6;
+  --color-primary-100: #e1f2eb;
+  --color-primary-500: #10b981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+
+  --color-slate-850: #1e293b;
+  --color-slate-950: #0f172a;
+
+  --color-accent-gold: #fbbf24;
+  --color-accent-emerald: #10b981;
+
+  --font-sans: "Outfit", "Inter", sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a; /* slate-950 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b; /* slate-800 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #10b981; /* primary-500 */
+}
+
+/* Custom Glassmorphism Classes */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(16, 185, 129, 0.3); /* green tint */
+  box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.08);
+}
+
+.glass-input {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  color: #f8fafc;
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 20px 2px rgba(16, 185, 129, 0.15);
+}
+
+.glow-amber {
+  box-shadow: 0 0 20px 2px rgba(245, 158, 11, 0.15);
+}
+
+/* Light theme overrides */
+.light {
+  color-scheme: light;
+
+  /* Custom variables override for Tailwind v4 */
+  --color-slate-950: #f8fafc; /* Very light background color */
+  --color-slate-900: #ffffff; /* Card/sidebar panel color */
+  --color-slate-850: #e2e8f0; /* Light borders */
+  --color-slate-800: #cbd5e1; /* Secondary border/divider lines */
+  --color-slate-700: #94a3b8; /* Muted text */
+  --color-slate-600: #64748b; /* Medium slate text */
+  --color-slate-500: #475569; /* Slate text primary */
+  --color-slate-400: #334155; /* Dark slate text */
+  --color-slate-300: #1e293b; /* Header colors */
+  --color-slate-200: #0f172a; /* Body text color */
+  --color-slate-100: #0f172a; /* Main text color */
+
+  --color-emerald-950: #ecfdf5; /* light green for text background */
+  --color-emerald-900: #d1fae5; /* light green highlights */
+
+  /* Override text-white directly in light mode */
+  --color-white: #0f172a;
+}
+
+/* Light mode specific classes */
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.light .glass-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.05);
+}
+
+.light .glass-card:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.05);
+}
+
+.light .glass-input {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+.light .glass-input:focus {
+  background: rgba(255, 255, 255, 1);
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.light .glass-input::placeholder {
+  color: #64748b;
+}
+
+.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Fix option background in select dropdowns on light mode */
+.light option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* PlotBook Premium Landing Page & Video Background Styles */
+.video-bg-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.video-bg-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dark-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Dark navy gradient overlay: 35% top to 75% bottom opacity for white text readability */
+  background: linear-gradient(
+    180deg,
+    rgba(8, 20, 33, 0.35) 0%,
+    rgba(8, 20, 33, 0.55) 50%,
+    rgba(8, 20, 33, 0.75) 100%
+  );
+  z-index: 1;
+}
+
+@keyframes gentleZoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-gentle-zoom {
+  animation: gentleZoom 8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.plot-hero-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 100vh;
+  padding: 6rem 2rem 4rem 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #F5EED6 0%, #B69344 50%, #856414 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glow-gold {
+  box-shadow: 0 0 25px 3px rgba(182, 147, 68, 0.18);
+}
+
+.glow-gold-sm {
+  box-shadow: 0 0 15px 1px rgba(182, 147, 68, 0.1);
+}
+
+/* Glass panel styled specifically for the gold theme */
+.glass-gold-card {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(182, 147, 68, 0.15);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-gold-card:hover {
+  border-color: rgba(182, 147, 68, 0.35);
+  box-shadow: 0 16px 45px 0 rgba(182, 147, 68, 0.08);
+}
+
+.btn-gold-primary {
+  background: linear-gradient(135deg, #B69344 0%, #856414 100%);
+  color: #0c111d;
+  font-weight: 750;
+  padding: 0.85rem 2.25rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(182, 147, 68, 0.3);
+}
+
+.btn-gold-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(182, 147, 68, 0.55);
+}
+
+.btn-gold-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.85rem 2.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(182, 147, 68, 0.25);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+}
+
+.btn-gold-secondary:hover {
+  background: rgba(182, 147, 68, 0.08);
+  border-color: rgba(182, 147, 68, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Redesigned Success Booking Confirmed Card & Glow */
+.glass-confirmed-card {
+  background: rgba(8, 20, 33, 0.72) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(182, 147, 68, 0.2) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 32px !important;
+}
+
+.glow-checkmark {
+  box-shadow: 0 0 20px 4px rgba(182, 147, 68, 0.35);
+  border-color: rgba(182, 147, 68, 0.4) !important;
+}
+
+
+
+
