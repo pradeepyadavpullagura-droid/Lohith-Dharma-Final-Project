@@ -56,7 +56,7 @@ async function runConcurrencyTests() {
       name: `Concurrent Client ${i + 1}`,
       phone: `+9199999900${String(i).padStart(2, '0')}`,
       email: `concurrent.client.${i + 1}@gmail.com`,
-      preferred_date: '2026-07-15',
+      preferred_date: `2026-07-${10 + i}`,
       preferred_time_slot: '02:00 PM - 04:00 PM',
       property_location: 'Seshachalam Foothills Sector (Sandalwood Plot)',
       budget: '1/2 Acre (200 Sandalwood Trees) - ₹30L - ₹45L',

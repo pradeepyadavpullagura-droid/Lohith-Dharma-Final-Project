@@ -22,7 +22,15 @@ const UserSwitcher = ({ setPage }) => {
   };
 
   const handleQuickLogin = async (email) => {
-    const password = email.includes('admin') ? 'admin123' : 'agent123';
+    let password = 'agent123';
+    if (email === 'pullagurapradeepyadav@gmail.com') {
+      password = '984915';
+    } else {
+      const agent = agents.find((a) => a.email === email);
+      if (agent && agent.password) {
+        password = agent.password;
+      }
+    }
     const result = await login(email, password);
     if (result.success) {
       setPage('dashboard');
@@ -123,7 +131,7 @@ const UserSwitcher = ({ setPage }) => {
                   <h4 className="font-bold text-sm text-white flex items-center gap-1.5">
                     System Administrator
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">admin@realestate.com</p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">pullagurapradeepyadav@gmail.com</p>
                 </div>
                 <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   Full Access
@@ -132,14 +140,14 @@ const UserSwitcher = ({ setPage }) => {
 
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => handleCopyLink('admin@realestate.com', 'admin')}
+                  onClick={() => handleCopyLink('pullagurapradeepyadav@gmail.com', 'admin')}
                   className="flex items-center justify-center gap-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition relative cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5 text-slate-500" />
                   <span>{copiedId === 'admin' ? 'Copied URL!' : 'Copy Link'}</span>
                 </button>
                 <button
-                  onClick={() => handleQuickLogin('admin@realestate.com')}
+                  onClick={() => handleQuickLogin('pullagurapradeepyadav@gmail.com')}
                   className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2 px-3 rounded-xl text-xs transition cursor-pointer shadow-md"
                 >
                   <LogIn className="w-3.5 h-3.5 text-slate-950" />

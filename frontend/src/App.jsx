@@ -50,7 +50,12 @@ const AppContent = () => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get('email');
     if (emailParam) {
-      const password = emailParam.includes('admin') ? 'admin123' : 'agent123';
+      let password = 'agent123';
+      if (emailParam === 'pullagurapradeepyadav@gmail.com') {
+        password = '984915';
+      } else if (emailParam === 'pradeepyadavpullagura@gmail.com') {
+        password = '123456789';
+      }
       login(emailParam, password).then((res) => {
         if (res.success) {
           setPage('dashboard');

@@ -104,12 +104,10 @@ node tests/backend.test.js
 ## 🔑 Demo Logins (Auto-populate Buttons Available)
 
 - **Admin Portal**:
-  - **Email**: `admin@realestate.com`
-  - **Password**: `admin123`
+  - **Email**: `pullagurapradeepyadav@gmail.com`
+  - **Password**: `984915`
 - **Sales Executive Portals**:
-  - **Rohan Sharma**: `rohan.sharma@realestate.com` / `agent123`
-  - **Sneha Reddy**: `sneha.reddy@realestate.com` / `agent123`
-  - **Amit Patel**: `amit.patel@realestate.com` / `agent123`
+  - **ayush**: `pradeepyadavpullagura@gmail.com` / `123456789`
 
 ---
 
@@ -117,7 +115,7 @@ node tests/backend.test.js
 
 To migrate from SQLite to MySQL:
 1. Open your MySQL client (e.g. phpMyAdmin, Workbench, or command-line CLI).
-2. Execute the schema script located at [docs/db_schema.sql](file:///c:/Users/prade/OneDrive/Desktop/SITE%20Project/docs/db_schema.sql) to create the database tables and insert initial mock entries.
+2. Execute the schema script located at [docs/db_schema.sql](file:///c:/Users/prade/OneDrive/Desktop/SITE%20Project/docs/db_schema.sql) to create the database tables and insert initial real entries.
 3. Open [/backend/.env](file:///c:/Users/prade/OneDrive/Desktop/SITE%20Project/backend/.env) and change the variables:
    ```env
    DB_TYPE=mysql

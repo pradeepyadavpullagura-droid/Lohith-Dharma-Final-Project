@@ -202,7 +202,7 @@ app.post('/api/create-booking', rateLimiter, async (req, res) => {
     const result = await bookingQueue.enqueue(async () => {
       // 2. Check or Create Customer
       let customerId;
-      const existingCustomers = await query('SELECT id FROM customers WHERE email = ? OR phone = ? LIMIT 1', [email, phone]);
+      const existingCustomers = await query('SELECT id FROM customers WHERE name = ? AND email = ? AND phone = ? LIMIT 1', [name, email, phone]);
 
       if (existingCustomers.length > 0) {
         customerId = existingCustomers[0].id;
@@ -224,10 +224,18 @@ app.post('/api/create-booking', rateLimiter, async (req, res) => {
         FROM agents a
         LEFT JOIN bookings b ON a.id = b.agent_id AND b.status IN ('Pending', 'Approved', 'Rescheduled')
         WHERE a.status = 'Available'
+          AND a.id NOT IN (
+            SELECT DISTINCT agent_id 
+            FROM bookings 
+            WHERE agent_id IS NOT NULL 
+              AND preferred_date = ? 
+              AND preferred_time_slot = ? 
+              AND status IN ('Pending', 'Approved', 'Rescheduled')
+          )
         GROUP BY a.id, a.name, a.phone
         ORDER BY active_bookings ASC
         LIMIT 1
-      `);
+      `, [preferred_date, preferred_time_slot]);
 
       if (availableAgents.length > 0) {
         assignedAgentId = availableAgents[0].id;
