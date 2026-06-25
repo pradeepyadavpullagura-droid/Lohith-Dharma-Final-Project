@@ -18,6 +18,10 @@
     "simplex-noise": "^4.0.3",
     "three": "^0.184.0"
   },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-arm64-gnu": "1.0.3",
+    "@rolldown/binding-linux-x64-gnu": "1.0.3"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.3.0",
