@@ -7,6 +7,6 @@
     "frontend"
   ],
   "scripts": {
-    "build": "npm install --legacy-peer-deps --force && npm run build --workspace=frontend"
+    "build": "npm run build --workspace=frontend"
   }
 }
