@@ -121,7 +121,7 @@ async function generateBookingCode() {
 // ----------------------------------------------------
 // API Status Endpoint
 // ----------------------------------------------------
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.json({
     success: true,
     message: 'Site Visit Booking Automation API is running.',
