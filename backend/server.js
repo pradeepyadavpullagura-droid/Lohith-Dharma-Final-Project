@@ -941,11 +941,17 @@ app.get('/api/health', async (req, res) => {
 
 // Serve compiled static assets from the frontend/dist directory in production
 if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-  const staticPath = path.join(__dirname, '../frontend/dist');
+  const staticPath = process.env.VERCEL
+    ? path.join(process.cwd(), 'frontend/dist')
+    : path.join(__dirname, '../frontend/dist');
   app.use(express.static(staticPath));
   
   app.get(/^(?!\/api).+/, (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'));
+    res.sendFile(path.join(staticPath, 'index.html'), (err) => {
+      if (err) {
+        res.status(404).send('Frontend build not found or failed to load. Please verify Vercel build logs.');
+      }
+    });
   });
 }
 
