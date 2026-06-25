@@ -76,6 +76,18 @@ async function generateBookingCode() {
 }
 
 // ----------------------------------------------------
+// API Status Endpoint
+// ----------------------------------------------------
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Site Visit Booking Automation API is running.',
+    database: getDbType(),
+    healthCheck: '/api/health'
+  });
+});
+
+// ----------------------------------------------------
 // Mock Auth Endpoint
 // ----------------------------------------------------
 app.post('/api/login', async (req, res) => {
