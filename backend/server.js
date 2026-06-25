@@ -643,7 +643,7 @@ app.get('/api/dashboard-stats', async (req, res) => {
         GROUP BY date
         ORDER BY date ASC
       `;
-    } else {
+    } else if (dbType === 'sqlite') {
       trendQuery = `
         SELECT date(created_at) as date, COUNT(*) as count
         FROM bookings
@@ -651,9 +651,26 @@ app.get('/api/dashboard-stats', async (req, res) => {
         GROUP BY date
         ORDER BY date ASC
       `;
+    } else {
+      // AlaSQL fallback
+      trendQuery = `SELECT created_at FROM bookings`;
     }
 
     const rawTrend = await query(trendQuery);
+
+    let trendData = [];
+    if (dbType === 'alasql') {
+      const counts = {};
+      rawTrend.forEach(row => {
+        if (row.created_at) {
+          const datePart = new Date(row.created_at).toISOString().split('T')[0];
+          counts[datePart] = (counts[datePart] || 0) + 1;
+        }
+      });
+      trendData = Object.entries(counts).map(([date, count]) => ({ date, count }));
+    } else {
+      trendData = rawTrend;
+    }
 
     // Fill in last 7 days defaults if empty
     const trend = [];
@@ -661,7 +678,7 @@ app.get('/api/dashboard-stats', async (req, res) => {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      const match = rawTrend.find(r => r.date === dateStr);
+      const match = trendData.find(r => r.date === dateStr);
       trend.push({
         date: dateStr,
         count: match ? match.count : 0
