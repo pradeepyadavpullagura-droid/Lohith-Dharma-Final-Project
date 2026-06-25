@@ -1,5 +1,5 @@
 const mysql = require('mysql2/promise');
-const sqlite3 = require('sqlite3').verbose();
+let sqlite3 = null;
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
@@ -39,6 +39,9 @@ async function initDatabase() {
       }
 
       if (dbType === 'sqlite') {
+        if (!sqlite3) {
+          sqlite3 = require('sqlite3').verbose();
+        }
         let sqliteFile = process.env.SQLITE_FILE || './database.sqlite';
         if (process.env.VERCEL) {
           sqliteFile = '/tmp/database.sqlite';
