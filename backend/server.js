@@ -223,7 +223,7 @@ app.post('/api/create-booking', rateLimiter, async (req, res) => {
         SELECT a.id, a.name, a.phone, COUNT(b.id) as active_bookings
         FROM agents a
         LEFT JOIN bookings b ON a.id = b.agent_id AND b.status IN ('Pending', 'Approved', 'Rescheduled')
-        WHERE a.status = 'Available'
+        WHERE a.status != 'Offline'
           AND a.id NOT IN (
             SELECT DISTINCT agent_id 
             FROM bookings 
