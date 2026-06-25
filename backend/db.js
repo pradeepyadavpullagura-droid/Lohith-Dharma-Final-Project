@@ -1,5 +1,11 @@
 const mysql = require('mysql2/promise');
 let sqlite3 = null;
+let alasql = null;
+try {
+  alasql = require('alasql');
+} catch (e) {
+  // Ignore in case alasql is not installed/loading initially
+}
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
@@ -183,7 +189,9 @@ async function query(sql, params = []) {
   } else if (dbType === 'alasql') {
     return new Promise((resolve, reject) => {
       try {
-        const alasql = require('alasql');
+        if (!alasql) {
+          alasql = require('alasql');
+        }
         const modifiedSql = sql.replace(/\bas\s+count\b/gi, 'as [count]');
         const coercedParams = coerceParams(modifiedSql, params);
         const res = alasql(modifiedSql, coercedParams);
@@ -377,7 +385,9 @@ module.exports = {
 function initializeAlasqlSchema() {
   return new Promise((resolve, reject) => {
     try {
-      const alasql = require('alasql');
+      if (!alasql) {
+        alasql = require('alasql');
+      }
       
       // Create tables
       alasql(`CREATE TABLE IF NOT EXISTS customers (

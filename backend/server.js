@@ -45,7 +45,7 @@ function rateLimiter(req, res, next) {
   if (process.env.NODE_ENV === 'test' || (process.env.SQLITE_FILE && process.env.SQLITE_FILE.includes('test_database'))) {
     return next();
   }
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || '127.0.0.1';
   const now = Date.now();
 
   if (!rateLimitStore.has(ip)) {
