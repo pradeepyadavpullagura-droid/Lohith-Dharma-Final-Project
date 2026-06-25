@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, Clock, MapPin, DollarSign, User, Phone, Mail, FileText, CheckCircle2, Building, ArrowRight, ArrowLeft } from 'lucide-react';
-import AuroraCanvas from '../components/AuroraCanvas';
+import { Calendar, Clock, MapPin, DollarSign, User, Phone, Mail, FileText, CheckCircle2, Building, ArrowLeft } from 'lucide-react';
 
 const CustomerBooking = ({ onNavigate }) => {
   const { createBooking, loading } = useApp();
@@ -57,7 +56,7 @@ const CustomerBooking = ({ onNavigate }) => {
   const getTomorrowStr = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
+    return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
   };
 
   if (bookingSuccess) {

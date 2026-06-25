@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, Clock, MapPin, CheckCircle, RefreshCw, AlertCircle, Phone, Mail, FileText } from 'lucide-react';
+import { Calendar, Clock, MapPin, RefreshCw, AlertCircle, FileText } from 'lucide-react';
 
 const AgentDashboard = ({ onViewBooking }) => {
   const { bookings, fetchBookings, updateBookingStatus, updateAgentStatus, user, loading } = useApp();
@@ -19,6 +19,7 @@ const AgentDashboard = ({ onViewBooking }) => {
     if (user && user.agentId) {
       fetchBookings({ agentId: user.agentId });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleRefresh = () => {
@@ -78,7 +79,6 @@ const AgentDashboard = ({ onViewBooking }) => {
   };
 
   // Calculate quick stats from assigned bookings list
-  const activeBookings = bookings.filter(b => ['Pending', 'Approved', 'Rescheduled'].includes(b.status));
   const completedBookingsCount = bookings.filter(b => b.status === 'Completed').length;
   const pendingVisitsCount = bookings.filter(b => b.status === 'Approved').length;
 

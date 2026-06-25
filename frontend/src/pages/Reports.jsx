@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { FileDown, Printer, Search, Calendar, RefreshCw, BarChart3, PieChart, Info } from 'lucide-react';
+import { FileDown, Printer, Search, RefreshCw, BarChart3, PieChart } from 'lucide-react';
 
 const Reports = () => {
   const { bookings, agents, fetchBookings, loading } = useApp();
@@ -13,6 +13,7 @@ const Reports = () => {
 
   useEffect(() => {
     fetchBookings(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const handleFilterChange = (e) => {
@@ -131,9 +132,9 @@ const Reports = () => {
                 <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="var(--color-slate-850)" strokeWidth="3"></circle>
                 
                 {/* Dynamically build stacked circular segments */}
-                {(() => {
+                {totalBookings > 0 && (() => {
                   let offset = 0;
-                  return Object.entries(statusCounts).map(([status, count], i) => {
+                  return Object.entries(statusCounts).map(([status, count]) => {
                     const percentage = (count / totalBookings) * 100;
                     const dashArray = `${percentage} ${100 - percentage}`;
                     const dashOffset = 100 - offset;
@@ -165,7 +166,7 @@ const Reports = () => {
 
             {/* Legends */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full text-[11px]">
-              {Object.entries(statusCounts).map(([status, count]) => {
+              {totalBookings > 0 && Object.entries(statusCounts).map(([status, count]) => {
                 let bulletColor = 'bg-slate-400';
                 if (status === 'Completed') bulletColor = 'bg-blue-500';
                 if (status === 'Approved') bulletColor = 'bg-emerald-500';
@@ -179,7 +180,7 @@ const Reports = () => {
                   </div>
                 );
               })}
-              {totalBookings === 0 && <span className="text-slate-500 italic">No bookings recorded</span>}
+              {totalBookings === 0 && <span className="text-slate-500 italic col-span-2 text-center py-2">No bookings recorded</span>}
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, ShieldAlert, Key, Copy, ExternalLink, X, ArrowRight, Radio, LogIn } from 'lucide-react';
+import { Users, ShieldAlert, Copy, X, LogIn } from 'lucide-react';
 
 const UserSwitcher = ({ setPage }) => {
   const { agents, fetchAgents, login, triggerToast, user } = useApp();
@@ -10,6 +10,7 @@ const UserSwitcher = ({ setPage }) => {
   // Fetch agents on mount to ensure we have the list
   useEffect(() => {
     fetchAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCopyLink = (email, id) => {

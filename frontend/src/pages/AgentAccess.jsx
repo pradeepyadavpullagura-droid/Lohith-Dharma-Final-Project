@@ -21,6 +21,7 @@ const AgentAccess = () => {
 
   useEffect(() => {
     fetchDashboardStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCopyCredentials = (agent) => {

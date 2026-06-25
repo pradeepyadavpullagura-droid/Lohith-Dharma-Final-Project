@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { LayoutDashboard, FileBarChart, LogOut, User, Building, PlusCircle, UserCheck, Key } from 'lucide-react';
+import { LayoutDashboard, FileBarChart, LogOut, Building, PlusCircle, Key } from 'lucide-react';
 
 const SidebarLayout = ({ children, activeTab, onTabChange, onNavigate }) => {
   const { user, logout } = useApp();

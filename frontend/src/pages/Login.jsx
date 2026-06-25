@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Lock, Mail, Building, UserCheck, ShieldAlert, ArrowLeft, Home } from 'lucide-react';
-import AuroraCanvas from '../components/AuroraCanvas';
 
 const Login = ({ onNavigate }) => {
   const { login, loading } = useApp();

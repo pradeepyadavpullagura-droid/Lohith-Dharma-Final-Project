@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
-  Users, Calendar, Clock, CheckCircle2, Search, Filter, 
-  UserPlus, RefreshCw, Send, AlertTriangle, ChevronRight, MessageSquare 
+  Users, Calendar, Clock, CheckCircle2, Search, 
+  UserPlus, RefreshCw, Send, ChevronRight, MessageSquare 
 } from 'lucide-react';
 
 const AdminDashboard = ({ onViewBooking }) => {
@@ -30,6 +30,7 @@ const AdminDashboard = ({ onViewBooking }) => {
   useEffect(() => {
     fetchBookings(filters);
     fetchDashboardStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const handleRefresh = () => {

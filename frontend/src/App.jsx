@@ -60,6 +60,7 @@ const AppContent = () => {
         }
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle viewing booking details

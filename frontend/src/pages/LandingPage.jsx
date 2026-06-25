@@ -14,8 +14,7 @@ import {
   X, 
   ChevronRight, 
   ArrowRight,
-  Map,
-  DollarSign
+  Map
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 

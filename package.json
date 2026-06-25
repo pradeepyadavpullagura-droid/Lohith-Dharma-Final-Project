@@ -1,0 +1,12 @@
+{
+  "name": "site-visit-booking-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=frontend"
+  }
+}

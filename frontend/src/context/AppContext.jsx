@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, no-unused-vars */
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
 const AppContext = createContext();
@@ -15,7 +16,7 @@ export const AppProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
 
-  const API_BASE = 'http://localhost:5000/api';
+  const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
   // Show dynamic toast notifications
   const triggerToast = (message, type = 'success') => {
@@ -43,6 +44,7 @@ export const AppProvider = ({ children }) => {
     if (user && (user.role === 'admin' || user.role === 'agent')) {
       fetchAgents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Auth Functions

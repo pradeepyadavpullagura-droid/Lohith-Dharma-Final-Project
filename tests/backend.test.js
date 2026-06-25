@@ -11,9 +11,6 @@ process.env.SQLITE_FILE = './test_database.sqlite';
 
 const { query, initDatabase, closeDatabase } = require('../backend/db');
 
-// Import server but since backend/server.js starts the server, we will load the backend endpoints.
-// To test clean without port conflicts, we can spin up our own test Express server instances 
-// by mimicking the backend setup or running it programmatically on port 5005.
 let serverInstance;
 const TEST_PORT = 5005;
 const API_URL = `http://localhost:${TEST_PORT}/api`;
@@ -41,74 +38,8 @@ async function runTests() {
     await query('DELETE FROM customers');
     console.log('Test database cleaned.');
 
-    // 2. Spin up the server programmatically
-    // We import server code but to prevent it running instantly, we setup a sub-app or mock
-    const express = require('express');
-    const cors = require('cors');
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
-    
-    // Re-bind the routing logic from server.js (we replicate endpoints for tests verification)
-    app.post('/api/login', async (req, res) => {
-      const { email, password } = req.body;
-      if (email === 'admin@realestate.com' && password === 'admin123') {
-        res.json({ success: true, user: { role: 'admin', name: 'Admin User' } });
-      } else {
-        res.status(401).json({ success: false, message: 'Invalid credentials' });
-      }
-    });
-
-    app.post('/api/create-booking', async (req, res) => {
-      const { name, phone, email, preferred_date, preferred_time_slot, property_location, budget, notes } = req.body;
-      
-      // Validation
-      if (!name || !phone || !email || !preferred_date || !preferred_time_slot || !property_location) {
-        return res.status(400).json({ success: false, message: 'Missing fields' });
-      }
-
-      const customerResult = await query('INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)', [name, phone, email]);
-      const customerId = customerResult.insertId;
-
-      // Find an agent
-      const agents = await query('SELECT * FROM agents LIMIT 1');
-      const agentId = agents.length > 0 ? agents[0].id : null;
-      const agentName = agents.length > 0 ? agents[0].name : 'Unassigned';
-
-      const bookingResult = await query(
-        "INSERT INTO bookings (booking_code, customer_id, agent_id, preferred_date, preferred_time_slot, property_location, budget, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)",
-        ['SV-9999', customerId, agentId, preferred_date, preferred_time_slot, property_location, budget, notes || '']
-      );
-
-      res.status(201).json({
-        success: true,
-        data: {
-          id: bookingResult.insertId,
-          booking_code: 'SV-9999',
-          customer_id: customerId,
-          agent_id: agentId,
-          agent_name: agentName,
-          status: 'Pending'
-        }
-      });
-    });
-
-    app.get('/api/bookings', async (req, res) => {
-      const rows = await query(`
-        SELECT b.*, c.name as customer_name, c.phone as customer_phone
-        FROM bookings b
-        JOIN customers c ON b.customer_id = c.id
-      `);
-      res.json({ success: true, data: rows });
-    });
-
-    app.put('/api/update-status', async (req, res) => {
-      const { bookingId, status, notes, updatedBy } = req.body;
-      await query('UPDATE bookings SET status = ? WHERE id = ?', [status, bookingId]);
-      await query('INSERT INTO visit_history (booking_id, status, notes, updated_by) VALUES (?, ?, ?, ?)', [bookingId, status, notes || '', updatedBy]);
-      res.json({ success: true });
-    });
-
+    // 2. Spin up the real server programmatically
+    const { app } = require('../backend/server');
     serverInstance = app.listen(TEST_PORT, () => {
       console.log(`Test server listening on port ${TEST_PORT}`);
     });
@@ -119,6 +50,14 @@ async function runTests() {
     await testCreateBooking();
     await testGetBookings();
     await testUpdateBookingStatus();
+    await testGetAgents();
+    await testCreateAgent();
+    await testUpdateAgent();
+    await testUpdateAgentStatus();
+    await testAssignAgent();
+    await testGetBookingDetails();
+    await testGetDashboardStats();
+    await testDeleteAgent();
 
     console.log('\n\x1b[32m%s\x1b[0m', '✓ ALL TESTS PASSED SUCCESSFULLY!');
     await shutdown(0);
@@ -177,7 +116,7 @@ async function testCreateBooking() {
   const data = await response.json();
   assert.strictEqual(response.status, 201);
   assert.strictEqual(data.success, true);
-  assert.strictEqual(data.data.booking_code, 'SV-9999');
+  assert.ok(data.data.booking_code.startsWith('SV-'));
   assert.strictEqual(data.data.status, 'Pending');
   createdBookingId = data.data.id;
   console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Lead Booking Creation Test Passed');
@@ -214,11 +153,150 @@ async function testUpdateBookingStatus() {
   const dbBooking = await query('SELECT status FROM bookings WHERE id = ?', [createdBookingId]);
   assert.strictEqual(dbBooking[0].status, 'Approved');
   
-  const history = await query('SELECT * FROM visit_history WHERE booking_id = ?', [createdBookingId]);
-  assert.strictEqual(history[0].status, 'Approved');
-  assert.strictEqual(history[0].notes, 'Visits approved by tester');
+  const history = await query('SELECT * FROM visit_history WHERE booking_id = ? ORDER BY created_at ASC', [createdBookingId]);
+  assert.strictEqual(history.length, 2); // 1. Created, 2. Approved
+  assert.strictEqual(history[1].status, 'Approved');
+  assert.strictEqual(history[1].notes, 'Visits approved by tester');
 
   console.log('\x1b[32m%s\x1b[0m', '  ✓ Workflows: Status Transition & History Trace Test Passed');
+}
+
+// Test Case: Fetch agents list
+async function testGetAgents() {
+  const response = await fetch(`${API_URL}/agents`);
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+  assert.ok(Array.isArray(data.data));
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Agents: Fetch Agents Dropdown Test Passed');
+}
+
+// Test Case: Create new agent
+let createdAgentId;
+async function testCreateAgent() {
+  const response = await fetch(`${API_URL}/agent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Test Agent',
+      email: 'test.agent@realestate.com',
+      phone: '+919876543219',
+      password: 'testagentpassword'
+    })
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 201);
+  assert.strictEqual(data.success, true);
+
+  // Get created agent ID
+  const dbAgent = await query('SELECT id FROM agents WHERE email = ?', ['test.agent@realestate.com']);
+  assert.ok(dbAgent.length > 0);
+  createdAgentId = dbAgent[0].id;
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Agents: Create Agent Test Passed');
+}
+
+// Test Case: Update agent details
+async function testUpdateAgent() {
+  const response = await fetch(`${API_URL}/agent/${createdAgentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Test Agent Updated',
+      email: 'test.agent.updated@realestate.com',
+      phone: '+919876543299'
+    })
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+
+  const dbAgent = await query('SELECT name, email, phone FROM agents WHERE id = ?', [createdAgentId]);
+  assert.strictEqual(dbAgent[0].name, 'Test Agent Updated');
+  assert.strictEqual(dbAgent[0].email, 'test.agent.updated@realestate.com');
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Agents: Update Agent Details Test Passed');
+}
+
+// Test Case: Update agent status (availability)
+async function testUpdateAgentStatus() {
+  const response = await fetch(`${API_URL}/update-agent-status`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agentId: createdAgentId,
+      status: 'Offline'
+    })
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+
+  const dbAgent = await query('SELECT status FROM agents WHERE id = ?', [createdAgentId]);
+  assert.strictEqual(dbAgent[0].status, 'Offline');
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Agents: Update Agent Availability Test Passed');
+}
+
+// Test Case: Assign agent to booking
+async function testAssignAgent() {
+  // Make agent Available so they can accept visits
+  await query("UPDATE agents SET status = 'Available' WHERE id = ?", [createdAgentId]);
+
+  const response = await fetch(`${API_URL}/assign-agent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      bookingId: createdBookingId,
+      agentId: createdAgentId
+    })
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+
+  const dbBooking = await query('SELECT agent_id FROM bookings WHERE id = ?', [createdBookingId]);
+  assert.strictEqual(dbBooking[0].agent_id, createdAgentId);
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Assign Representative Test Passed');
+}
+
+// Test Case: Fetch single booking details with history & notifications
+async function testGetBookingDetails() {
+  const response = await fetch(`${API_URL}/booking/${createdBookingId}`);
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+  assert.ok(data.data.booking);
+  assert.ok(Array.isArray(data.data.history));
+  assert.ok(Array.isArray(data.data.notifications));
+  assert.strictEqual(data.data.booking.customer_name, 'Test Client');
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Get Booking Trace Details Test Passed');
+}
+
+// Test Case: Fetch aggregated dashboard stats
+async function testGetDashboardStats() {
+  const response = await fetch(`${API_URL}/dashboard-stats`);
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+  assert.ok(data.stats);
+  assert.strictEqual(data.stats.totalLeads, 1);
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Reports: Get Dashboard Statistics Test Passed');
+}
+
+// Test Case: Delete agent & verify foreign keys
+async function testDeleteAgent() {
+  const response = await fetch(`${API_URL}/agent/${createdAgentId}`, {
+    method: 'DELETE'
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+
+  const dbAgent = await query('SELECT * FROM agents WHERE id = ?', [createdAgentId]);
+  assert.strictEqual(dbAgent.length, 0);
+
+  // Check SQLite constraint (ON DELETE SET NULL): booking's agent_id should now be null
+  const dbBooking = await query('SELECT agent_id FROM bookings WHERE id = ?', [createdBookingId]);
+  assert.strictEqual(dbBooking[0].agent_id, null);
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Agents: Delete Agent & Verify Constraints Test Passed');
 }
 
 // Teardown

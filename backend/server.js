@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const { query, initDatabase, getDbType } = require('./db');
 
 dotenv.config();
@@ -9,14 +10,64 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json());
+
+// Production Error Sanitizer Middleware
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function (data) {
+    if (process.env.NODE_ENV === 'production' && res.statusCode === 500 && data && typeof data.message === 'string') {
+      const isSensitive = data.message.includes('SQL') || 
+                          data.message.includes('Database') || 
+                          data.message.includes('constraint') || 
+                          data.message.includes('sqlite') ||
+                          data.message.includes('mysql') ||
+                          data.message.includes('table') ||
+                          data.message.includes('column') ||
+                          data.message.includes('SyntaxError');
+      if (isSensitive) {
+        data.message = 'Internal Server Error';
+      }
+    }
+    return originalJson.call(this, data);
+  };
+  next();
+});
+
+// Async Queue for serializing concurrent booking operations to prevent race conditions
+class AsyncQueue {
+  constructor() {
+    this.chain = Promise.resolve();
+  }
+  enqueue(fn) {
+    return new Promise((resolve, reject) => {
+      this.chain = this.chain
+        .then(() => fn())
+        .then(resolve)
+        .catch(reject);
+    });
+  }
+}
+const bookingQueue = new AsyncQueue();
 
 // Helper to generate unique booking code SV-XXXX
 async function generateBookingCode() {
   try {
-    const res = await query('SELECT COUNT(*) as count FROM bookings');
-    const nextId = (res[0].count || 0) + 1001;
+    const res = await query('SELECT MAX(id) as maxId FROM bookings');
+    const nextId = (res[0].maxId || 0) + 1001;
     return `SV-${nextId}`;
   } catch (err) {
     // Fallback in case of error
@@ -35,10 +86,12 @@ app.post('/api/login', async (req, res) => {
   }
 
   // Admin Check
-  if (email === 'admin@realestate.com' && password === 'admin123') {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@realestate.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  if (email === adminEmail && password === adminPassword) {
     return res.json({
       success: true,
-      user: { name: 'System Admin', email: 'admin@realestate.com', role: 'admin' }
+      user: { name: 'System Admin', email: adminEmail, role: 'admin' }
     });
   }
 
@@ -86,75 +139,96 @@ app.post('/api/create-booking', async (req, res) => {
   }
 
   try {
-    // 2. Check or Create Customer
-    let customerId;
-    const existingCustomers = await query('SELECT id FROM customers WHERE email = ? OR phone = ? LIMIT 1', [email, phone]);
+    const result = await bookingQueue.enqueue(async () => {
+      // 2. Check or Create Customer
+      let customerId;
+      const existingCustomers = await query('SELECT id FROM customers WHERE email = ? OR phone = ? LIMIT 1', [email, phone]);
 
-    if (existingCustomers.length > 0) {
-      customerId = existingCustomers[0].id;
-    } else {
-      const customerResult = await query(
-        'INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)',
-        [name, phone, email]
-      );
-      customerId = customerResult.insertId;
-    }
+      if (existingCustomers.length > 0) {
+        customerId = existingCustomers[0].id;
+      } else {
+        const customerResult = await query(
+          'INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)',
+          [name, phone, email]
+        );
+        customerId = customerResult.insertId;
+      }
 
-    // 3. Auto-Assign Agent (Load balancing rule: find available agent with least active bookings)
-    let assignedAgentId = null;
-    let assignedAgentName = 'Unassigned';
-    let assignedAgentPhone = '';
+      // 3. Auto-Assign Agent (Load balancing rule: find available agent with least active bookings)
+      let assignedAgentId = null;
+      let assignedAgentName = 'Unassigned';
+      let assignedAgentPhone = '';
 
-    const availableAgents = await query(`
-      SELECT a.id, a.name, a.phone, COUNT(b.id) as active_bookings
-      FROM agents a
-      LEFT JOIN bookings b ON a.id = b.agent_id AND b.status IN ('Pending', 'Approved', 'Rescheduled')
-      WHERE a.status = 'Available'
-      GROUP BY a.id, a.name, a.phone
-      ORDER BY active_bookings ASC
-      LIMIT 1
-    `);
+      const availableAgents = await query(`
+        SELECT a.id, a.name, a.phone, COUNT(b.id) as active_bookings
+        FROM agents a
+        LEFT JOIN bookings b ON a.id = b.agent_id AND b.status IN ('Pending', 'Approved', 'Rescheduled')
+        WHERE a.status = 'Available'
+        GROUP BY a.id, a.name, a.phone
+        ORDER BY active_bookings ASC
+        LIMIT 1
+      `);
 
-    if (availableAgents.length > 0) {
-      assignedAgentId = availableAgents[0].id;
-      assignedAgentName = availableAgents[0].name;
-      assignedAgentPhone = availableAgents[0].phone;
-    }
+      if (availableAgents.length > 0) {
+        assignedAgentId = availableAgents[0].id;
+        assignedAgentName = availableAgents[0].name;
+        assignedAgentPhone = availableAgents[0].phone;
+      }
 
-    // 4. Generate unique Booking Code
-    const bookingCode = await generateBookingCode();
+      // 4. Create Booking with collision-retry logic (handles parallel concurrency)
+      let newBookingId;
+      let bookingCode;
+      let attempts = 0;
+      const maxAttempts = 10;
 
-    // 5. Create Booking
-    const bookingResult = await query(`
-      INSERT INTO bookings (booking_code, customer_id, agent_id, preferred_date, preferred_time_slot, property_location, budget, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
-    `, [bookingCode, customerId, assignedAgentId, preferred_date, preferred_time_slot, property_location, budget, notes || '']);
+      while (attempts < maxAttempts) {
+        try {
+          bookingCode = await generateBookingCode();
+          const bookingResult = await query(`
+            INSERT INTO bookings (booking_code, customer_id, agent_id, preferred_date, preferred_time_slot, property_location, budget, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
+          `, [bookingCode, customerId, assignedAgentId, preferred_date, preferred_time_slot, property_location, budget, notes || '']);
+          
+          newBookingId = bookingResult.insertId;
+          break; // Successfully inserted
+        } catch (insertErr) {
+          const isDup = insertErr.message.includes('UNIQUE constraint failed') || 
+                        insertErr.code === 'ER_DUP_ENTRY' || 
+                        insertErr.message.includes('Duplicate entry');
+                        
+          if (isDup) {
+            attempts++;
+            if (attempts >= maxAttempts) {
+              throw insertErr;
+            }
+            // Brief random backoff to allow parallel inserts to write and update MAX(id)
+            await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 30) + 10));
+          } else {
+            throw insertErr; // Re-throw any other database error
+          }
+        }
+      }
 
-    const newBookingId = bookingResult.insertId;
+      // 6. Log History
+      await query(`
+        INSERT INTO visit_history (booking_id, status, notes, updated_by)
+        VALUES (?, 'Pending', 'Booking registered online. Auto-assigned agent.', 'System')
+      `, [newBookingId]);
 
-    // 6. Log History
-    await query(`
-      INSERT INTO visit_history (booking_id, status, notes, updated_by)
-      VALUES (?, 'Pending', 'Booking registered online. Auto-assigned agent.', 'System')
-    `, [newBookingId]);
+      // 7. Generate WhatsApp Confirmation Notification
+      let smsMessage = `Hello ${name}, thank you for booking a site visit! Booking ID: ${bookingCode} for ${property_location} is registered. `;
+      if (assignedAgentId) {
+        smsMessage += `Agent ${assignedAgentName} (${assignedAgentPhone}) has been assigned to assist you. Status: Pending Approval.`;
+      } else {
+        smsMessage += `Our team is reviewing your request and will assign an agent shortly. Status: Pending.`;
+      }
 
-    // 7. Generate WhatsApp Confirmation Notification
-    let smsMessage = `Hello ${name}, thank you for booking a site visit! Booking ID: ${bookingCode} for ${property_location} is registered. `;
-    if (assignedAgentId) {
-      smsMessage += `Agent ${assignedAgentName} (${assignedAgentPhone}) has been assigned to assist you. Status: Pending Approval.`;
-    } else {
-      smsMessage += `Our team is reviewing your request and will assign an agent shortly. Status: Pending.`;
-    }
+      await query(`
+        INSERT INTO notifications (booking_id, type, recipient, message, status)
+        VALUES (?, 'WhatsApp', ?, ?, 'Sent')
+      `, [newBookingId, phone, smsMessage]);
 
-    await query(`
-      INSERT INTO notifications (booking_id, type, recipient, message, status)
-      VALUES (?, 'WhatsApp', ?, ?, 'Sent')
-    `, [newBookingId, phone, smsMessage]);
-
-    res.status(201).json({
-      success: true,
-      message: 'Booking created successfully',
-      data: {
+      return {
         id: newBookingId,
         booking_code: bookingCode,
         customer_id: customerId,
@@ -166,9 +240,14 @@ app.post('/api/create-booking', async (req, res) => {
         budget,
         status: 'Pending',
         notes
-      }
+      };
     });
 
+    res.status(201).json({
+      success: true,
+      message: 'Booking created successfully',
+      data: result
+    });
   } catch (err) {
     console.error('Error creating booking:', err);
     res.status(500).json({ success: false, message: 'Server error: ' + err.message });
@@ -324,8 +403,20 @@ app.put('/api/update-status', async (req, res) => {
 
     // Update Agent Status if booking gets 'Completed' or goes 'On Visit'
     if (booking.agent_id) {
-      if (status === 'Completed' || status === 'Cancelled' || status === 'Rejected') {
-        await query("UPDATE agents SET status = 'Available' WHERE id = ?", [booking.agent_id]);
+      if (status === 'Completed' || status === 'Cancelled' || status === 'Rejected' || status === 'Rescheduled' || status === 'Pending') {
+        // Free the agent if they have no other 'Approved' bookings
+        const otherApproved = await query(`
+          SELECT COUNT(*) as count FROM bookings 
+          WHERE agent_id = ? AND status = 'Approved' AND id != ?
+        `, [booking.agent_id, bookingId]);
+        
+        if (otherApproved[0].count === 0) {
+          // Preserve 'Offline' status by checking if they are currently 'On Visit'
+          const currentAgent = await query('SELECT status FROM agents WHERE id = ?', [booking.agent_id]);
+          if (currentAgent.length > 0 && currentAgent[0].status === 'On Visit') {
+            await query("UPDATE agents SET status = 'Available' WHERE id = ?", [booking.agent_id]);
+          }
+        }
       } else if (status === 'Approved') {
         await query("UPDATE agents SET status = 'On Visit' WHERE id = ?", [booking.agent_id]);
       }
@@ -430,6 +521,23 @@ app.post('/api/assign-agent', async (req, res) => {
       await query("UPDATE agents SET status = 'On Visit' WHERE id = ?", [agentId]);
     }
 
+    // Release old agent if reassigned
+    const oldAgentId = booking.agent_id;
+    if (oldAgentId && oldAgentId !== parseInt(agentId)) {
+      const otherApproved = await query(`
+        SELECT COUNT(*) as count FROM bookings 
+        WHERE agent_id = ? AND status = 'Approved' AND id != ?
+      `, [oldAgentId, bookingId]);
+      
+      if (otherApproved[0].count === 0) {
+        // Preserve 'Offline' status by checking if they are currently 'On Visit'
+        const currentOldAgent = await query('SELECT status FROM agents WHERE id = ?', [oldAgentId]);
+        if (currentOldAgent.length > 0 && currentOldAgent[0].status === 'On Visit') {
+          await query("UPDATE agents SET status = 'Available' WHERE id = ?", [oldAgentId]);
+        }
+      }
+    }
+
     // Log History
     await query(`
       INSERT INTO visit_history (booking_id, status, notes, updated_by)
@@ -481,7 +589,8 @@ app.put('/api/update-agent-status', async (req, res) => {
 // ----------------------------------------------------
 app.get('/api/dashboard-stats', async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     // Counts
     const leadsRes = await query('SELECT COUNT(*) as count FROM bookings');
@@ -648,12 +757,36 @@ app.delete('/api/agent/:id', async (req, res) => {
   }
 });
 
-// Initialize database and start server
-initDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
-}).catch(err => {
-  console.error('Critical database initialization error:', err);
-  process.exit(1);
+// Health check probe
+app.get('/api/health', async (req, res) => {
+  try {
+    await query('SELECT 1');
+    res.json({ success: true, status: 'OK', database: getDbType() });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database health check failed' });
+  }
 });
+
+// Serve compiled static assets from the frontend/dist directory in production
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+  const staticPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(staticPath));
+  
+  app.get(/^(?!\/api).+/, (req, res) => {
+    res.sendFile(path.join(staticPath, 'index.html'));
+  });
+}
+
+// Initialize database and start server if run directly
+if (require.main === module) {
+  initDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  }).catch(err => {
+    console.error('Critical database initialization error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { app, initDatabase };

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
-  ArrowLeft, Calendar, Clock, MapPin, Building, DollarSign, 
-  User, Phone, Mail, FileText, CheckCircle, Bell, MessageCircle 
+  ArrowLeft, Calendar, Clock, Building, DollarSign, 
+  User, Phone, Mail, Bell, MessageCircle 
 } from 'lucide-react';
 
 const BookingDetails = ({ bookingId, onBack }) => {
@@ -19,6 +19,7 @@ const BookingDetails = ({ bookingId, onBack }) => {
     if (bookingId) {
       loadDetails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
 
   if (loading || !data) {
@@ -151,7 +152,7 @@ const BookingDetails = ({ bookingId, onBack }) => {
           <div className="glass-card p-6 rounded-2xl border border-slate-800">
             <h3 className="text-sm font-bold text-white mb-6">Workflow Audit Timeline</h3>
             <div className="relative pl-6 border-l border-slate-800 space-y-6">
-              {history.map((log, index) => (
+              {history.map((log) => (
                 <div key={log.id} className="relative">
                   {/* Circle Indicator */}
                   <span className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-slate-950 border-2 border-emerald-500 flex items-center justify-center">
