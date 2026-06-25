@@ -40,14 +40,19 @@ async function initDatabase() {
 
       if (dbType === 'sqlite') {
         let useSqlite = false;
-        try {
-          if (!sqlite3) {
-            sqlite3 = require('sqlite3').verbose();
-          }
-          useSqlite = true;
-        } catch (sqliteErr) {
-          console.warn('Failed to load native sqlite3 driver, falling back to pure-JS AlaSQL database:', sqliteErr.message);
+        if (process.env.VERCEL) {
+          console.log('Bypassing native sqlite3 library on Vercel.');
           dbType = 'alasql';
+        } else {
+          try {
+            if (!sqlite3) {
+              sqlite3 = require('sqlite3').verbose();
+            }
+            useSqlite = true;
+          } catch (sqliteErr) {
+            console.warn('Failed to load native sqlite3 driver, falling back to pure-JS AlaSQL database:', sqliteErr.message);
+            dbType = 'alasql';
+          }
         }
 
         if (useSqlite) {
@@ -114,7 +119,7 @@ async function initDatabase() {
 
 // Unified query wrapper supporting both MySQL, SQLite, and AlaSQL
 async function query(sql, params = []) {
-  if (!mysqlPool && !sqliteDb && dbType !== 'alasql') {
+  if (!initPromise) {
     await initDatabase();
   }
 
