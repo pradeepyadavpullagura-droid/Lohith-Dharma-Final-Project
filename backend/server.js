@@ -13,10 +13,10 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || process.env.NODE_ENV !== 'production') {
+    if (!origin || process.env.NODE_ENV !== 'production' || process.env.VERCEL) {
       return callback(null, true);
     }
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
