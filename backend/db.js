@@ -117,6 +117,29 @@ async function initDatabase() {
   return initPromise;
 }
 
+function coerceParams(sql, params) {
+  if (!params || !params.length) return params;
+  const segments = sql.split('?');
+  return params.map((param, i) => {
+    if (typeof param === 'string') {
+      const segment = segments[i];
+      if (segment) {
+        const match = segment.match(/(\w+)\s*(?:=|!=|<>|>=|<=|>|<|LIKE|IS)\s*$/i);
+        if (match) {
+          const colName = match[1].toLowerCase();
+          if (colName === 'id' || colName.endsWith('_id')) {
+            const num = Number(param);
+            if (!isNaN(num)) {
+              return num;
+            }
+          }
+        }
+      }
+    }
+    return param;
+  });
+}
+
 // Unified query wrapper supporting both MySQL, SQLite, and AlaSQL
 async function query(sql, params = []) {
   if (!initPromise) {
@@ -161,7 +184,9 @@ async function query(sql, params = []) {
     return new Promise((resolve, reject) => {
       try {
         const alasql = require('alasql');
-        const res = alasql(sql, params);
+        const modifiedSql = sql.replace(/\bas\s+count\b/gi, 'as [count]');
+        const coercedParams = coerceParams(modifiedSql, params);
+        const res = alasql(modifiedSql, coercedParams);
         
         const normalizedSql = sql.trim().toUpperCase();
         if (normalizedSql.startsWith('INSERT')) {
