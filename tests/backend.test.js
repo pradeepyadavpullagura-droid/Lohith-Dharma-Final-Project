@@ -50,6 +50,7 @@ async function runTests() {
     await testLoginSuccess();
     await testLoginFailure();
     await testCreateBooking();
+    await testCreateBookingInvalidEmail();
     await testGetBookings();
     await testUpdateBookingStatus();
     await testGetAgents();
@@ -125,6 +126,30 @@ async function testCreateBooking() {
   createdBookingId = data.data.id;
   console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Lead Booking Creation Test Passed');
 }
+
+// Test Case: Create booking with invalid email (should fail)
+async function testCreateBookingInvalidEmail() {
+  const response = await fetch(`${API_URL}/create-booking`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Test Customer',
+      phone: '+919999999999',
+      email: 'invalid-email-format',
+      preferred_date: '2026-06-10',
+      preferred_time_slot: '11:00 AM - 01:00 PM',
+      property_location: 'Yerragondapalem Gated Farms',
+      budget: '1 Acre - ₹60L',
+      notes: 'Should fail validation'
+    })
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 400);
+  assert.strictEqual(data.success, false);
+  assert.strictEqual(data.message, 'Invalid email address format');
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Invalid Email Rejection Test Passed');
+}
+
 
 // Test Case: Fetch bookings list
 async function testGetBookings() {
