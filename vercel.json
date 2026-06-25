@@ -1,13 +1,10 @@
 {
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend"
     },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/dist/$1"
+    "backend": {
+      "root": "backend"
     }
-  ]
+  }
 }
