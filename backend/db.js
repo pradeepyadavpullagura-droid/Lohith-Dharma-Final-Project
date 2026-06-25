@@ -110,6 +110,7 @@ async function initDatabase() {
         try {
           await initializeAlasqlSchema();
           console.log('AlaSQL Database Schema and Seed Data initialized successfully.');
+          await loadFromKvdb();
         } catch (initErr) {
           console.error('Error seeding AlaSQL Database:', initErr.message);
         }
@@ -187,7 +188,7 @@ async function query(sql, params = []) {
       }
     });
   } else if (dbType === 'alasql') {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
         if (!alasql) {
           alasql = require('alasql');
@@ -197,6 +198,9 @@ async function query(sql, params = []) {
         const res = alasql(modifiedSql, coercedParams);
         
         const normalizedSql = sql.trim().toUpperCase();
+        const isWrite = normalizedSql.startsWith('INSERT') || normalizedSql.startsWith('UPDATE') || normalizedSql.startsWith('DELETE');
+        
+        let resultObj;
         if (normalizedSql.startsWith('INSERT')) {
           const match = sql.match(/INSERT\s+INTO\s+(\w+)/i);
           let insertId = typeof res === 'number' ? res : 0;
@@ -207,18 +211,27 @@ async function query(sql, params = []) {
               insertId = maxRes[0].maxId || insertId;
             }
           }
-          resolve({
+          resultObj = {
             insertId: insertId,
             affectedRows: 1
-          });
+          };
         } else if (normalizedSql.startsWith('UPDATE') || normalizedSql.startsWith('DELETE')) {
-          resolve({
+          resultObj = {
             insertId: 0,
             affectedRows: res
-          });
+          };
         } else {
-          resolve(res);
+          resultObj = res;
         }
+
+        if (isWrite) {
+          try {
+            await saveToKvdb();
+          } catch (syncErr) {
+            console.error('Failed to sync database write to restful-api.dev:', syncErr.message);
+          }
+        }
+        resolve(resultObj);
       } catch (err) {
         console.error(`AlaSQL query error (SQL: ${sql}):`, err.message);
         reject(err);
@@ -350,6 +363,9 @@ async function closeDatabase() {
     mysqlPool = null;
     initPromise = null;
   }
+  if (dbType === 'alasql') {
+    initPromise = null;
+  }
 }
 
 async function runMigrationSqlite() {
@@ -375,11 +391,89 @@ async function runMigrationSqlite() {
   });
 }
 
+const PERSIST_URL = 'https://jsonblob.com/api/jsonBlob/019f005d-ab4a-72bf-8a2f-69f0bec9ff6c';
+
+async function loadFromKvdb() {
+  if (dbType !== 'alasql') return;
+  try {
+    console.log('Fetching database state from JSONBlob...');
+    const response = await fetch(PERSIST_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const dbState = await response.json();
+    if (dbState && typeof dbState === 'object' && Object.keys(dbState).length > 0) {
+      const tables = ['customers', 'agents', 'bookings', 'visit_history', 'notifications'];
+      
+      let loadedCount = 0;
+      for (const table of tables) {
+        if (dbState[table] && Array.isArray(dbState[table].data)) {
+          if (!alasql) {
+            alasql = require('alasql');
+          }
+          if (alasql.tables[table]) {
+            alasql.tables[table].deleteall();
+            const rows = dbState[table].data;
+            for (const row of rows) {
+              alasql.tables[table].insert(row);
+            }
+            if (alasql.tables[table].identities && alasql.tables[table].identities.id) {
+              alasql.tables[table].identities.id.value = dbState[table].nextId || 1;
+            }
+            loadedCount++;
+          }
+        }
+      }
+      console.log(`Successfully loaded ${loadedCount} tables from JSONBlob.`);
+    } else {
+      console.log('No valid database state found on JSONBlob. Using seed data.');
+    }
+  } catch (err) {
+    console.error('Failed to load database state from JSONBlob:', err.message);
+  }
+}
+
+async function saveToKvdb() {
+  if (dbType !== 'alasql') return;
+  try {
+    if (!alasql) {
+      alasql = require('alasql');
+    }
+    const tables = ['customers', 'agents', 'bookings', 'visit_history', 'notifications'];
+    const dbState = {};
+    
+    for (const table of tables) {
+      if (alasql.tables[table]) {
+        dbState[table] = {
+          data: alasql.tables[table].data,
+          nextId: (alasql.tables[table].identities && alasql.tables[table].identities.id) ? alasql.tables[table].identities.id.value : 1
+        };
+      }
+    }
+    
+    console.log('Saving database state to JSONBlob...');
+    const response = await fetch(PERSIST_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(dbState)
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    console.log('Database state saved successfully to JSONBlob.');
+  } catch (err) {
+    console.error('Failed to save database state to JSONBlob:', err.message);
+  }
+}
+
 module.exports = {
   query,
   initDatabase,
   closeDatabase,
-  getDbType: () => dbType
+  getDbType: () => dbType,
+  getAlasql: () => alasql
 };
 
 function initializeAlasqlSchema() {
