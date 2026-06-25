@@ -35,7 +35,15 @@ async function runConcurrencyTests() {
     await query('DELETE FROM visit_history');
     await query('DELETE FROM bookings');
     await query('DELETE FROM customers');
-    console.log('Concurrency database cleaned.');
+    await query('DELETE FROM agents');
+    
+    // Seed test agents for workload load balancing assertions
+    await query(`INSERT INTO agents (name, email, phone, status, password) VALUES
+      ('Rohan Sharma', 'rohan.sharma@realestate.com', '+919876543210', 'Available', 'agent123'),
+      ('Sneha Reddy', 'sneha.reddy@realestate.com', '+919876543211', 'Available', 'agent123'),
+      ('Vikram Singh', 'vikram.singh@realestate.com', '+919876543214', 'Available', 'agent123')`);
+    
+    console.log('Concurrency database cleaned and test agents seeded.');
 
     // 2. Spin up Express app
     const { app } = require('../backend/server');

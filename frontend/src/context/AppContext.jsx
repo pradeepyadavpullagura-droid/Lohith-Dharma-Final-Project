@@ -127,6 +127,18 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Helper to trigger global state refresh
+  const refreshData = () => {
+    if (user) {
+      if (user.role === 'agent') {
+        fetchBookings({ agentId: user.agentId });
+      } else {
+        fetchBookings();
+      }
+      fetchDashboardStats();
+    }
+  };
+
   // Fetch Single Booking Details with History & Notifications
   const fetchBookingDetails = async (id) => {
     setLoading(true);
@@ -160,6 +172,7 @@ export const AppProvider = ({ children }) => {
       if (data.success) {
         triggerToast(`Booking updated to: ${updateData.status}`);
         fetchAgents(); // Refresh agent list
+        refreshData();
         return true;
       } else {
         triggerToast(data.message, 'error');
@@ -186,6 +199,7 @@ export const AppProvider = ({ children }) => {
       if (data.success) {
         triggerToast('Sales agent assigned successfully');
         fetchAgents(); // Refresh agent list
+        refreshData();
         return true;
       } else {
         triggerToast(data.message, 'error');
@@ -306,6 +320,57 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Delete Booking
+  const deleteBooking = async (id) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/booking/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        triggerToast('Booking deleted successfully');
+        refreshData();
+        return true;
+      } else {
+        triggerToast(data.message, 'error');
+        return false;
+      }
+    } catch (err) {
+      triggerToast('Failed to delete booking', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update Booking details
+  const updateBooking = async (id, bookingData) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/booking/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        triggerToast('Booking details updated successfully');
+        refreshData();
+        return true;
+      } else {
+        triggerToast(data.message, 'error');
+        return false;
+      }
+    } catch (err) {
+      console.error('Update booking failed:', err);
+      triggerToast('Failed to update booking details', 'error');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Get aggregated dashboard stats
   const fetchDashboardStats = async () => {
     try {
@@ -342,6 +407,8 @@ export const AppProvider = ({ children }) => {
         updateAgentStatus,
         updateAgent,
         deleteAgent,
+        deleteBooking,
+        updateBooking,
         createAgent
       }}
     >

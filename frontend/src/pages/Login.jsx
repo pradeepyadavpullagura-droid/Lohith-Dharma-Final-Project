@@ -1,23 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Lock, Mail, Building, UserCheck, ShieldAlert, ArrowLeft, Home } from 'lucide-react';
+import { Lock, Mail, Building, ArrowLeft, Home, Eye, EyeOff } from 'lucide-react';
 
 const Login = ({ onNavigate }) => {
   const { login, loading } = useApp();
-  const [email, setEmail] = useState('admin@realestate.com');
-  const [password, setPassword] = useState('admin123');
-  const [activeRole, setActiveRole] = useState('admin'); // 'admin' or 'agent'
-
-  const handleRoleToggle = (role) => {
-    setActiveRole(role);
-    if (role === 'admin') {
-      setEmail('admin@realestate.com');
-      setPassword('admin123');
-    } else {
-      setEmail('rohan.sharma@realestate.com');
-      setPassword('agent123');
-    }
-  };
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,32 +55,7 @@ const Login = ({ onNavigate }) => {
           </button>
         </div>
 
-        <h2 className="text-xl font-bold text-white mb-2">Internal Portal Access</h2>
-        <p className="text-xs text-slate-400 mb-6">Select a profile below to auto-fill credentials and log in instantly for demonstration.</p>
-
-        {/* Role Toggle Switcher */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-800 mb-6">
-          <button
-            onClick={() => handleRoleToggle('admin')}
-            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold tracking-wide transition ${
-              activeRole === 'admin'
-                ? 'bg-emerald-600 text-slate-950 font-bold shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" /> Admin Portal
-          </button>
-          <button
-            onClick={() => handleRoleToggle('agent')}
-            className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold tracking-wide transition ${
-              activeRole === 'agent'
-                ? 'bg-emerald-600 text-slate-950 font-bold shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" /> Sales Agent
-          </button>
-        </div>
+        <h2 className="text-xl font-bold text-white mb-6">Internal Portal Access</h2>
 
         {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -115,13 +79,20 @@ const Login = ({ onNavigate }) => {
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="glass-input w-full py-2.5 pl-10 pr-4 text-sm"
+                className="glass-input w-full py-2.5 pl-10 pr-10 text-sm"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition cursor-pointer flex items-center justify-center"
+              >
+                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -133,10 +104,6 @@ const Login = ({ onNavigate }) => {
             {loading ? 'Authorizing Access...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-[10px] text-slate-500 leading-relaxed border-t border-slate-800/80 pt-4">
-          For testing alternative agents: Use Sneha Reddy's email <span className="text-slate-400">sneha.reddy@realestate.com</span> or Amit Patel's <span className="text-slate-400">amit.patel@realestate.com</span> with password <span className="text-slate-400 font-mono">agent123</span>.
-        </div>
       </div>
     </div>
   );

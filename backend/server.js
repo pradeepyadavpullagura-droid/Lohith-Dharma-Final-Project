@@ -98,8 +98,8 @@ app.post('/api/login', async (req, res) => {
   }
 
   // Admin Check
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@realestate.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const adminEmail = process.env.ADMIN_EMAIL || 'pullagurapradeepyadav@gmail.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || '984915';
   if (email === adminEmail && password === adminPassword) {
     return res.json({
       success: true,
@@ -124,7 +124,7 @@ app.post('/api/login', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Database login error: ' + err.message });
   }
 
-  return res.status(401).json({ success: false, message: 'Invalid credentials. Use admin@realestate.com/admin123 or your registered agent credentials.' });
+  return res.status(401).json({ success: false, message: `Invalid credentials. Use ${adminEmail}/${adminPassword} or your registered agent credentials.` });
 });
 
 // ----------------------------------------------------
@@ -767,6 +767,90 @@ app.put('/api/agent/:id', async (req, res) => {
       await query('UPDATE agents SET name = ?, email = ?, phone = ? WHERE id = ?', [name, email, phone, id]);
     }
     res.json({ success: true, message: 'Agent details updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// API: PUT /api/booking/:id
+// ----------------------------------------------------
+app.put('/api/booking/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, phone, email, preferred_date, preferred_time_slot, property_location, budget, notes } = req.body;
+
+  if (!name || !phone || !email || !preferred_date || !preferred_time_slot || !property_location) {
+    return res.status(400).json({ success: false, message: 'Please fill in all required fields: name, phone, email, preferred_date, preferred_time_slot, property_location' });
+  }
+
+  try {
+    // Find booking
+    const bookings = await query('SELECT * FROM bookings WHERE id = ?', [id]);
+    if (bookings.length === 0) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
+    }
+    const booking = bookings[0];
+
+    // Update Customer details
+    await query('UPDATE customers SET name = ?, phone = ?, email = ? WHERE id = ?', [name, phone, email, booking.customer_id]);
+
+    // Update Booking details
+    await query(`
+      UPDATE bookings 
+      SET preferred_date = ?, preferred_time_slot = ?, property_location = ?, budget = ?, notes = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `, [preferred_date, preferred_time_slot, property_location, budget, notes || '', id]);
+
+    // Insert history log
+    await query(`
+      INSERT INTO visit_history (booking_id, status, notes, updated_by)
+      VALUES (?, ?, 'Booking details updated by Admin.', 'Admin')
+    `, [id, booking.status]);
+
+    res.json({ success: true, message: 'Booking details updated successfully.' });
+  } catch (err) {
+    console.error('Error updating booking:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// API: DELETE /api/booking/:id
+// ----------------------------------------------------
+app.delete('/api/booking/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Fetch booking to check if it exists and to find its agent ID
+    const bookings = await query('SELECT * FROM bookings WHERE id = ?', [id]);
+    if (bookings.length === 0) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
+    }
+    const booking = bookings[0];
+
+    // 2. Database-agnostic deletion of related records (history, notifications)
+    await query('DELETE FROM notifications WHERE booking_id = ?', [id]);
+    await query('DELETE FROM visit_history WHERE booking_id = ?', [id]);
+
+    // 3. Delete booking itself
+    await query('DELETE FROM bookings WHERE id = ?', [id]);
+
+    // 4. Update Agent status if necessary
+    if (booking.agent_id && booking.status === 'Approved') {
+      const otherApproved = await query(`
+        SELECT COUNT(*) as count FROM bookings 
+        WHERE agent_id = ? AND status = 'Approved'
+      `, [booking.agent_id]);
+      
+      if (otherApproved[0].count === 0) {
+        const currentAgent = await query('SELECT status FROM agents WHERE id = ?', [booking.agent_id]);
+        if (currentAgent.length > 0 && currentAgent[0].status === 'On Visit') {
+          await query("UPDATE agents SET status = 'Available' WHERE id = ?", [booking.agent_id]);
+        }
+      }
+    }
+
+    res.json({ success: true, message: 'Booking deleted successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -2,12 +2,63 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   ArrowLeft, Calendar, Clock, Building, DollarSign, 
-  User, Phone, Mail, Bell, MessageCircle 
+  User, Phone, Mail, Bell, MessageCircle, Trash2, Pencil 
 } from 'lucide-react';
 
 const BookingDetails = ({ bookingId, onBack }) => {
-  const { fetchBookingDetails, loading } = useApp();
+  const { fetchBookingDetails, deleteBooking, updateBooking, user, loading } = useApp();
   const [data, setData] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    preferred_date: '',
+    preferred_time_slot: '10:00 AM - 12:00 PM',
+    property_location: '',
+    budget: '',
+    notes: ''
+  });
+
+  const openEditModal = () => {
+    if (!data || !data.booking) return;
+    const { booking } = data;
+    setEditForm({
+      name: booking.customer_name || '',
+      phone: booking.customer_phone || '',
+      email: booking.customer_email || '',
+      preferred_date: booking.preferred_date || '',
+      preferred_time_slot: booking.preferred_time_slot || '10:00 AM - 12:00 PM',
+      property_location: booking.property_location || '',
+      budget: booking.budget || '',
+      notes: booking.notes || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const success = await updateBooking(bookingId, editForm);
+    if (success) {
+      setShowEditModal(false);
+      // Reload details
+      const details = await fetchBookingDetails(bookingId);
+      if (details) {
+        setData(details);
+      }
+    }
+  };
+
+  const handleDeleteSubmit = async (e) => {
+    e.preventDefault();
+    const success = await deleteBooking(bookingId);
+    if (success) {
+      setShowDeleteModal(false);
+      onBack();
+    }
+  };
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -67,9 +118,27 @@ const BookingDetails = ({ bookingId, onBack }) => {
             </h1>
             <p className="text-xs text-slate-400">Review status logs, workflow modifications, and notification histories.</p>
           </div>
-          <span className={`text-xs font-bold px-3 py-1 rounded-full ${getStatusBadge(booking.status)}`}>
-            {booking.status}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span className={`text-xs font-bold px-3 py-1 rounded-full ${getStatusBadge(booking.status)}`}>
+              {booking.status}
+            </span>
+            {user?.role === 'admin' && (
+              <>
+                <button
+                  onClick={openEditModal}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold py-1.5 px-3 rounded-xl text-xs border border-slate-750 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit Booking
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="bg-red-950/40 hover:bg-red-900/60 text-red-400 font-semibold py-1.5 px-3 rounded-xl text-xs border border-red-900/30 hover:border-red-800 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Booking
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -219,6 +288,182 @@ const BookingDetails = ({ bookingId, onBack }) => {
 
         </div>
       </div>
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in-up">
+          <div className="glass-card max-w-sm w-full p-6 rounded-2xl border border-slate-800 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-1">Delete Site Visit Booking</h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Are you sure you want to permanently delete booking <span className="text-red-400 font-mono font-bold">{booking.booking_code}</span>?
+            </p>
+
+            <form onSubmit={handleDeleteSubmit} className="space-y-4">
+              <div className="flex gap-2.5 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-300 leading-normal font-light">
+                <Trash2 className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                This action is permanent. Deleting this booking will also erase the audit timeline, WhatsApp dispatch history, and release any assigned agents.
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                  }}
+                  className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold py-2 px-4 rounded-xl text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-red-650 hover:bg-red-650/85 text-white font-bold py-2 px-4 rounded-xl text-xs transition"
+                >
+                  Delete Booking
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          EDIT BOOKING MODAL
+          ========================================================================= */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto animate-fade-in-up py-8">
+          <div className="glass-card max-w-lg w-full p-6 rounded-2xl border border-slate-800 shadow-2xl relative">
+            <h3 className="text-lg font-bold text-white mb-1">Edit Booking Details</h3>
+            <p className="text-xs text-slate-400 mb-4">Modify customer and visit logistics for <span className="text-emerald-400 font-mono font-bold">{booking.booking_code}</span>.</p>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              {/* Customer Profile Section */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-850 pb-1">Customer Profile</h4>
+                
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="glass-input w-full py-1.5 px-3 text-xs"
+                    placeholder="Full Name"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                      className="glass-input w-full py-1.5 px-3 text-xs"
+                      placeholder="+919900000000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={editForm.email}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="glass-input w-full py-1.5 px-3 text-xs"
+                      placeholder="name@email.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Site Tour Logistics Section */}
+              <div className="space-y-3 pt-2">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-850 pb-1">Site Tour Logistics</h4>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Preferred Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={editForm.preferred_date}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, preferred_date: e.target.value }))}
+                      className="glass-input w-full py-1.5 px-3 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Preferred Time Slot</label>
+                    <select
+                      value={editForm.preferred_time_slot}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, preferred_time_slot: e.target.value }))}
+                      className="glass-input w-full py-1.5 px-3 text-xs text-slate-200"
+                    >
+                      <option value="09:00 AM - 11:00 AM" className="bg-slate-900">09:00 AM - 11:00 AM</option>
+                      <option value="11:00 AM - 01:00 PM" className="bg-slate-900">11:00 AM - 01:00 PM</option>
+                      <option value="02:00 PM - 04:00 PM" className="bg-slate-900">02:00 PM - 04:00 PM</option>
+                      <option value="04:00 PM - 06:00 PM" className="bg-slate-900">04:00 PM - 06:00 PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Property Location</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.property_location}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, property_location: e.target.value }))}
+                    className="glass-input w-full py-1.5 px-3 text-xs"
+                    placeholder="e.g. Greenwood Residency, Sector 45"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Budget Option</label>
+                  <input
+                    type="text"
+                    value={editForm.budget}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, budget: e.target.value }))}
+                    className="glass-input w-full py-1.5 px-3 text-xs"
+                    placeholder="e.g. ₹80L - ₹1.2Cr"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Notes / Remarks</label>
+                  <textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Additional requests or specifications..."
+                    rows="2"
+                    className="glass-input w-full py-1.5 px-3 text-xs"
+                  ></textarea>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                  }}
+                  className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold py-2 px-4 rounded-xl text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-4 rounded-xl text-xs transition cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

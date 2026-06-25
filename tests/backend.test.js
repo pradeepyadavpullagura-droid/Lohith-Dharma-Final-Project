@@ -14,6 +14,8 @@ const { query, initDatabase, closeDatabase } = require('../backend/db');
 let serverInstance;
 const TEST_PORT = 5005;
 const API_URL = `http://localhost:${TEST_PORT}/api`;
+const TEST_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pullagurapradeepyadav@gmail.com';
+const TEST_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '984915';
 
 async function runTests() {
   console.log('\x1b[36m%s\x1b[0m', '=== Starting Backend Integration Tests ===');
@@ -56,8 +58,10 @@ async function runTests() {
     await testUpdateAgentStatus();
     await testAssignAgent();
     await testGetBookingDetails();
+    await testUpdateBookingDetails();
     await testGetDashboardStats();
     await testDeleteAgent();
+    await testDeleteBooking();
 
     console.log('\n\x1b[32m%s\x1b[0m', '✓ ALL TESTS PASSED SUCCESSFULLY!');
     await shutdown(0);
@@ -74,7 +78,7 @@ async function testLoginSuccess() {
   const response = await fetch(`${API_URL}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@realestate.com', password: 'admin123' })
+    body: JSON.stringify({ email: TEST_ADMIN_EMAIL, password: TEST_ADMIN_PASSWORD })
   });
   const data = await response.json();
   assert.strictEqual(response.status, 200);
@@ -88,7 +92,7 @@ async function testLoginFailure() {
   const response = await fetch(`${API_URL}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@realestate.com', password: 'wrongpassword' })
+    body: JSON.stringify({ email: TEST_ADMIN_EMAIL, password: 'wrongpassword' })
   });
   const data = await response.json();
   assert.strictEqual(response.status, 401);
@@ -297,6 +301,73 @@ async function testDeleteAgent() {
   const dbBooking = await query('SELECT agent_id FROM bookings WHERE id = ?', [createdBookingId]);
   assert.strictEqual(dbBooking[0].agent_id, null);
   console.log('\x1b[32m%s\x1b[0m', '  ✓ Agents: Delete Agent & Verify Constraints Test Passed');
+}
+
+// Test Case: Update booking & customer details
+async function testUpdateBookingDetails() {
+  const response = await fetch(`${API_URL}/booking/${createdBookingId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Updated Tester Client',
+      phone: '+919999998888',
+      email: 'updated@tester.com',
+      preferred_date: '2026-06-15',
+      preferred_time_slot: '02:00 PM - 04:00 PM',
+      property_location: 'Updated Greenwood Residency',
+      budget: '₹1.5Cr - ₹2.0Cr',
+      notes: 'Updated notes'
+    })
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+
+  // Assert updates in database
+  const dbBookingList = await query(`
+    SELECT b.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email
+    FROM bookings b
+    JOIN customers c ON b.customer_id = c.id
+    WHERE b.id = ?
+  `, [createdBookingId]);
+
+  assert.strictEqual(dbBookingList[0].customer_name, 'Updated Tester Client');
+  assert.strictEqual(dbBookingList[0].customer_phone, '+919999998888');
+  assert.strictEqual(dbBookingList[0].customer_email, 'updated@tester.com');
+  assert.strictEqual(dbBookingList[0].preferred_date, '2026-06-15');
+  assert.strictEqual(dbBookingList[0].preferred_time_slot, '02:00 PM - 04:00 PM');
+  assert.strictEqual(dbBookingList[0].property_location, 'Updated Greenwood Residency');
+  assert.strictEqual(dbBookingList[0].budget, '₹1.5Cr - ₹2.0Cr');
+  assert.strictEqual(dbBookingList[0].notes, 'Updated notes');
+
+  // Assert history log added
+  const history = await query('SELECT * FROM visit_history WHERE booking_id = ? ORDER BY id DESC LIMIT 1', [createdBookingId]);
+  assert.ok(history[0].notes.includes('Booking details updated'));
+
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Edit Customer & Booking Details Test Passed');
+}
+
+// Test Case: Delete booking & verify constraints
+async function testDeleteBooking() {
+  const response = await fetch(`${API_URL}/booking/${createdBookingId}`, {
+    method: 'DELETE'
+  });
+  const data = await response.json();
+  assert.strictEqual(response.status, 200);
+  assert.strictEqual(data.success, true);
+
+  // Assert that booking is gone
+  const dbBooking = await query('SELECT * FROM bookings WHERE id = ?', [createdBookingId]);
+  assert.strictEqual(dbBooking.length, 0);
+
+  // Assert that related notifications and history are also gone
+  const dbHistory = await query('SELECT * FROM visit_history WHERE booking_id = ?', [createdBookingId]);
+  assert.strictEqual(dbHistory.length, 0);
+
+  const dbNoti = await query('SELECT * FROM notifications WHERE booking_id = ?', [createdBookingId]);
+  assert.strictEqual(dbNoti.length, 0);
+
+  console.log('\x1b[32m%s\x1b[0m', '  ✓ Bookings: Delete Booking & Cascade Clean Test Passed');
 }
 
 // Teardown
