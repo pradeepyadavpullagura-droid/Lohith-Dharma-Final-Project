@@ -16,15 +16,15 @@ const AgentAccess = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
   
-  const [addForm, setAddForm] = useState({ name: '', email: '', phone: '' });
-  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', phone: '', password: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', password: '' });
 
   useEffect(() => {
     fetchDashboardStats();
   }, []);
 
   const handleCopyCredentials = (agent) => {
-    const text = `Email: ${agent.email}\nPassword: agent123`;
+    const text = `Email: ${agent.email}\nPassword: ${agent.password || 'agent123'}`;
     navigator.clipboard.writeText(text);
     triggerToast(`Credentials copied for ${agent.name}!`);
     setCopiedId(agent.id);
@@ -68,7 +68,7 @@ const AgentAccess = () => {
     const success = await createAgent(addForm);
     if (success) {
       setShowAddModal(false);
-      setAddForm({ name: '', email: '', phone: '' });
+      setAddForm({ name: '', email: '', phone: '', password: '' });
       fetchDashboardStats();
     }
   };
@@ -79,7 +79,8 @@ const AgentAccess = () => {
     setEditForm({
       name: agent.name,
       email: agent.email,
-      phone: agent.phone
+      phone: agent.phone,
+      password: agent.password || ''
     });
     setShowEditModal(true);
   };
@@ -216,7 +217,7 @@ const AgentAccess = () => {
                       </div>
                       <div className="flex items-center gap-2 text-slate-400">
                         <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span className="font-mono bg-slate-950/80 px-1.5 py-0.5 rounded text-[10px] border border-slate-850">agent123</span>
+                        <span className="font-mono bg-slate-950/80 px-1.5 py-0.5 rounded text-[10px] border border-slate-850">{agent.password || 'agent123'}</span>
                       </div>
                     </td>
 
@@ -352,6 +353,17 @@ const AgentAccess = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+                <input
+                  type="password"
+                  value={addForm.password}
+                  onChange={(e) => setAddForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Defaults to agent123"
+                  className="glass-input w-full py-2.5 px-3 text-sm"
+                />
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-2 justify-end pt-2 border-t border-slate-800">
                 <button
@@ -415,6 +427,17 @@ const AgentAccess = () => {
                   value={editForm.phone}
                   onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="+919876543210"
+                  className="glass-input w-full py-2.5 px-3 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Password (Optional)</label>
+                <input
+                  type="password"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Leave blank to keep unchanged"
                   className="glass-input w-full py-2.5 px-3 text-sm"
                 />
               </div>

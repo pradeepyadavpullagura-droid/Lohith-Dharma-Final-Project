@@ -53,6 +53,12 @@ async function initDatabase() {
           } catch (initErr) {
             console.error('Error seeding SQLite Database:', initErr.message);
           }
+        } else {
+          try {
+            await runMigrationSqlite();
+          } catch (migrationErr) {
+            console.error('Error running SQLite migrations:', migrationErr.message);
+          }
         }
         resolve();
       });
@@ -133,6 +139,7 @@ function initializeSqliteSchema() {
             email TEXT NOT NULL UNIQUE,
             phone TEXT NOT NULL,
             status TEXT DEFAULT 'Available',
+            password TEXT DEFAULT 'agent123',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )`);
 
@@ -175,12 +182,12 @@ function initializeSqliteSchema() {
           )`);
 
           // Insert seed data
-          await run(`INSERT INTO agents (name, email, phone, status) VALUES
-            ('Rohan Sharma', 'rohan.sharma@realestate.com', '+919876543210', 'Available'),
-            ('Sneha Reddy', 'sneha.reddy@realestate.com', '+919876543211', 'Available'),
-            ('Amit Patel', 'amit.patel@realestate.com', '+919876543212', 'On Visit'),
-            ('Priya Nair', 'priya.nair@realestate.com', '+919876543213', 'Offline'),
-            ('Vikram Singh', 'vikram.singh@realestate.com', '+919876543214', 'Available')`);
+          await run(`INSERT INTO agents (name, email, phone, status, password) VALUES
+            ('Rohan Sharma', 'rohan.sharma@realestate.com', '+919876543210', 'Available', 'agent123'),
+            ('Sneha Reddy', 'sneha.reddy@realestate.com', '+919876543211', 'Available', 'agent123'),
+            ('Amit Patel', 'amit.patel@realestate.com', '+919876543212', 'On Visit', 'agent123'),
+            ('Priya Nair', 'priya.nair@realestate.com', '+919876543213', 'Offline', 'agent123'),
+            ('Vikram Singh', 'vikram.singh@realestate.com', '+919876543214', 'Available', 'agent123')`);
 
           await run(`INSERT INTO customers (name, phone, email) VALUES
             ('Rajesh Kumar', '+919911223344', 'rajesh.k@gmail.com'),
@@ -234,6 +241,29 @@ async function closeDatabase() {
     console.log('Closed MySQL Database pool.');
     mysqlPool = null;
   }
+}
+
+async function runMigrationSqlite() {
+  return new Promise((resolve, reject) => {
+    sqliteDb.all("PRAGMA table_info(agents)", (err, columns) => {
+      if (err) {
+        return reject(err);
+      }
+      const hasPassword = columns.some(col => col.name === 'password');
+      if (!hasPassword) {
+        console.log("Migration: Adding 'password' column to SQLite 'agents' table...");
+        sqliteDb.run("ALTER TABLE agents ADD COLUMN password TEXT DEFAULT 'agent123'", (alterErr) => {
+          if (alterErr) {
+            return reject(alterErr);
+          }
+          console.log("Migration: 'password' column successfully added.");
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 module.exports = {

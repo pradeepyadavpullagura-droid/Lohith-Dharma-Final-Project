@@ -45,18 +45,21 @@ app.post('/api/login', async (req, res) => {
   // Agent Check
   try {
     const agents = await query('SELECT * FROM agents WHERE email = ?', [email]);
-    if (agents.length > 0 && password === 'agent123') {
+    if (agents.length > 0) {
       const agent = agents[0];
-      return res.json({
-        success: true,
-        user: { name: agent.name, email: agent.email, role: 'agent', agentId: agent.id, phone: agent.phone }
-      });
+      const dbPassword = agent.password || 'agent123';
+      if (password === dbPassword) {
+        return res.json({
+          success: true,
+          user: { name: agent.name, email: agent.email, role: 'agent', agentId: agent.id, phone: agent.phone }
+        });
+      }
     }
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Database login error: ' + err.message });
   }
 
-  return res.status(401).json({ success: false, message: 'Invalid credentials. Use admin@realestate.com/admin123 or any agent email/agent123.' });
+  return res.status(401).json({ success: false, message: 'Invalid credentials. Use admin@realestate.com/admin123 or your registered agent credentials.' });
 });
 
 // ----------------------------------------------------
@@ -580,7 +583,7 @@ app.get('/api/dashboard-stats', async (req, res) => {
 // API: POST /api/agent
 // ----------------------------------------------------
 app.post('/api/agent', async (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, password } = req.body;
 
   if (!name || !email || !phone) {
     return res.status(400).json({ success: false, message: 'Name, email, and phone are required fields' });
@@ -593,7 +596,9 @@ app.post('/api/agent', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email address is already registered.' });
     }
 
-    await query('INSERT INTO agents (name, email, phone, status) VALUES (?, ?, ?, "Available")', [name, email, phone]);
+    const agentPassword = password || 'agent123';
+
+    await query('INSERT INTO agents (name, email, phone, status, password) VALUES (?, ?, ?, "Available", ?)', [name, email, phone, agentPassword]);
     res.status(201).json({ success: true, message: 'Agent registered successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -605,7 +610,7 @@ app.post('/api/agent', async (req, res) => {
 // ----------------------------------------------------
 app.put('/api/agent/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, email, phone } = req.body;
+  const { name, email, phone, password } = req.body;
 
   if (!name || !email || !phone) {
     return res.status(400).json({ success: false, message: 'Name, email, and phone are required fields' });
@@ -618,7 +623,11 @@ app.put('/api/agent/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email address is already in use by another executive.' });
     }
 
-    await query('UPDATE agents SET name = ?, email = ?, phone = ? WHERE id = ?', [name, email, phone, id]);
+    if (password) {
+      await query('UPDATE agents SET name = ?, email = ?, phone = ?, password = ? WHERE id = ?', [name, email, phone, password, id]);
+    } else {
+      await query('UPDATE agents SET name = ?, email = ?, phone = ? WHERE id = ?', [name, email, phone, id]);
+    }
     res.json({ success: true, message: 'Agent details updated successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

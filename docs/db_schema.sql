@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS agents (
   email VARCHAR(100) NOT NULL UNIQUE,
   phone VARCHAR(20) NOT NULL,
   status VARCHAR(25) DEFAULT 'Available', -- 'Available', 'On Visit', 'Offline'
+  password VARCHAR(100) DEFAULT 'agent123',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -71,12 +72,12 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- ==========================================
 
 -- Seed Agents
-INSERT INTO agents (name, email, phone, status) VALUES
-('Rohan Sharma', 'rohan.sharma@realestate.com', '+919876543210', 'Available'),
-('Sneha Reddy', 'sneha.reddy@realestate.com', '+919876543211', 'Available'),
-('Amit Patel', 'amit.patel@realestate.com', '+919876543212', 'On Visit'),
-('Priya Nair', 'priya.nair@realestate.com', '+919876543213', 'Offline'),
-('Vikram Singh', 'vikram.singh@realestate.com', '+919876543214', 'Available');
+INSERT INTO agents (name, email, phone, status, password) VALUES
+('Rohan Sharma', 'rohan.sharma@realestate.com', '+919876543210', 'Available', 'agent123'),
+('Sneha Reddy', 'sneha.reddy@realestate.com', '+919876543211', 'Available', 'agent123'),
+('Amit Patel', 'amit.patel@realestate.com', '+919876543212', 'On Visit', 'agent123'),
+('Priya Nair', 'priya.nair@realestate.com', '+919876543213', 'Offline', 'agent123'),
+('Vikram Singh', 'vikram.singh@realestate.com', '+919876543214', 'Available', 'agent123');
 
 -- Seed Customers
 INSERT INTO customers (name, phone, email) VALUES

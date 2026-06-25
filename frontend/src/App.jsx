@@ -10,7 +10,6 @@ import Reports from './pages/Reports';
 import AgentAccess from './pages/AgentAccess';
 import SidebarLayout from './components/SidebarLayout';
 import ToastContainer from './components/ToastContainer';
-import UserSwitcher from './components/UserSwitcher';
 import { Sun, Moon } from 'lucide-react';
 
 
@@ -179,9 +178,6 @@ const AppContent = () => {
 
       {/* Floating System Messages */}
       <ToastContainer />
-
-      {/* Quick Access User Impersonator */}
-      <UserSwitcher setPage={setPage} />
     </div>
   );
 };
