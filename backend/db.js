@@ -40,6 +40,10 @@ async function initDatabase() {
               rejectUnauthorized: false
             }
           });
+          // Prevent process crashes on idle client connection resets
+          pgPool.on('error', (err) => {
+            console.error('Unexpected error on idle database client:', err.message);
+          });
           // Test connection
           await pgPool.query('SELECT 1');
           console.log('Successfully connected to PostgreSQL (Supabase) Database.');
