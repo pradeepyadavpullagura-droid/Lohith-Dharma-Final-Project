@@ -21,13 +21,6 @@ import { useApp } from '../context/AppContext';
 export const LandingPage = ({ onNavigate }) => {
   const { triggerToast } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [inquiryForm, setInquiryForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  });
-  const [submitting, setSubmitting] = useState(false);
 
   const features = [
     {
@@ -105,20 +98,6 @@ export const LandingPage = ({ onNavigate }) => {
     }
   ];
 
-  const handleInquiryChange = (e) => {
-    const { name, value } = e.target;
-    setInquiryForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleInquirySubmit = (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setTimeout(() => {
-      triggerToast('Inquiry submitted! Our representative will contact you shortly.');
-      setInquiryForm({ name: '', email: '', phone: '', message: '' });
-      setSubmitting(false);
-    }, 1200);
-  };
 
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
@@ -322,123 +301,42 @@ export const LandingPage = ({ onNavigate }) => {
 
         {/* Contact Section */}
         <section id="contact" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-slate-950/80 border-t border-slate-900">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              
-              {/* Contact Information */}
-              <div className="flex flex-col justify-between">
-                <div>
-                  <h2 className="text-2xl sm:text-4xl font-extrabold text-white">Let's Find Your Property</h2>
-                  <p className="text-sm text-slate-400 mt-3 font-light leading-relaxed max-w-lg">
-                    Have questions about Red Sandalwood farmlands, registration guidelines, or want to schedule a personalized transport service for your site visit? Drop us a line.
-                  </p>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white">Let's Find Your Property</h2>
+              <p className="text-sm text-slate-400 mt-3 font-light leading-relaxed max-w-xl mx-auto">
+                Have questions about Red Sandalwood farmlands, registration guidelines, or want to schedule a personalized transport service for your site visit? Drop us a line.
+              </p>
+            </div>
 
-                  <div className="mt-8 flex flex-col gap-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-[#B69344]/10 border border-[#B69344]/20 flex items-center justify-center shrink-0">
-                        <Phone className="w-5 h-5 text-[#B69344]" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-500 block">Phone Support</span>
-                        <span className="text-sm font-bold text-white">+91 80966 77099</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-[#B69344]/10 border border-[#B69344]/20 flex items-center justify-center shrink-0">
-                        <Mail className="w-5 h-5 text-[#B69344]" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-500 block">Email Inquiry</span>
-                        <span className="text-sm font-bold text-white">dharmass@gmail.com</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-[#B69344]/10 border border-[#B69344]/20 flex items-center justify-center shrink-0">
-                        <Building className="w-5 h-5 text-[#B69344]" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-500 block">Corporate Address</span>
-                        <span className="text-sm font-bold text-white">2nd Floor, Plot No 152, Road No. 2, Rock Town Residents Colony, Sai Nagar, L. B. Nagar, Hyderabad, Telangana 500068</span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="flex flex-col items-center text-center p-6 bg-slate-900/40 border border-slate-900 rounded-2xl">
+                <div className="w-12 h-12 rounded-xl bg-[#B69344]/10 border border-[#B69344]/20 flex items-center justify-center mb-4">
+                  <Phone className="w-5 h-5 text-[#B69344]" />
                 </div>
-
-                <div className="mt-8 pt-6 border-t border-slate-900 text-xs text-slate-500">
-                  * Dynamic WhatsApp dispatch notifications are automatically sent once booking details are verified.
-                </div>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Phone Support</span>
+                <span className="text-sm font-bold text-white">+91 80966 77099</span>
               </div>
 
-              {/* Inquiry Form */}
-              <div className="glass-gold-card p-6 sm:p-8 rounded-3xl border border-slate-800 glow-gold-sm">
-                <h3 className="text-lg font-bold text-white mb-2">Send an Online Inquiry</h3>
-                <p className="text-xs text-slate-400 mb-6">Our relationship managers will share project documents and yield calculators.</p>
-
-                <form onSubmit={handleInquirySubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Name</label>
-                      <input 
-                        type="text" 
-                        required
-                        name="name"
-                        value={inquiryForm.name}
-                        onChange={handleInquiryChange}
-                        placeholder="Ramesh Sharma" 
-                        className="glass-input w-full py-2 px-3.5 text-xs text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
-                      <input 
-                        type="tel" 
-                        required
-                        name="phone"
-                        value={inquiryForm.phone}
-                        onChange={handleInquiryChange}
-                        placeholder="+91 9900000000" 
-                        className="glass-input w-full py-2 px-3.5 text-xs text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
-                    <input 
-                      type="email" 
-                      required
-                      name="email"
-                      value={inquiryForm.email}
-                      onChange={handleInquiryChange}
-                      placeholder="ramesh@gmail.com" 
-                      className="glass-input w-full py-2 px-3.5 text-xs text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Requirements / Message</label>
-                    <textarea 
-                      rows="3" 
-                      name="message"
-                      value={inquiryForm.message}
-                      onChange={handleInquiryChange}
-                      placeholder="Specify your budget, preferred acreage, or sandalwood plantation inquiries..."
-                      className="glass-input w-full py-2.5 px-3.5 text-xs text-white"
-                    />
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="w-full bg-[#B69344] hover:bg-[#B69344]/90 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
-                  >
-                    {submitting ? 'Submitting Form...' : 'Send Inquiry Request'}
-                  </button>
-                </form>
+              <div className="flex flex-col items-center text-center p-6 bg-slate-900/40 border border-slate-900 rounded-2xl">
+                <div className="w-12 h-12 rounded-xl bg-[#B69344]/10 border border-[#B69344]/20 flex items-center justify-center mb-4">
+                  <Mail className="w-5 h-5 text-[#B69344]" />
+                </div>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Email Inquiry</span>
+                <span className="text-sm font-bold text-white">dharmass@gmail.com</span>
               </div>
 
+              <div className="flex flex-col items-center text-center p-6 bg-slate-900/40 border border-slate-900 rounded-2xl">
+                <div className="w-12 h-12 rounded-xl bg-[#B69344]/10 border border-[#B69344]/20 flex items-center justify-center mb-4">
+                  <Building className="w-5 h-5 text-[#B69344]" />
+                </div>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Corporate Address</span>
+                <span className="text-sm font-bold text-white max-w-xs leading-relaxed">2nd Floor, Plot No 152, Road No. 2, Rock Town Residents Colony, L. B. Nagar, Hyderabad 500068</span>
+              </div>
+            </div>
+
+            <div className="mt-12 text-center text-xs text-slate-500 pt-6 border-t border-slate-900">
+              * Dynamic WhatsApp dispatch notifications are automatically sent once booking details are verified.
             </div>
           </div>
         </section>
