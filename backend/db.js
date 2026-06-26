@@ -1,10 +1,16 @@
 const mysql = require('mysql2/promise');
 let sqlite3 = null;
 let alasql = null;
+let pg = null;
 try {
   alasql = require('alasql');
 } catch (e) {
   // Ignore in case alasql is not installed/loading initially
+}
+try {
+  pg = require('pg');
+} catch (e) {
+  // Ignore if pg not installed
 }
 const path = require('path');
 const fs = require('fs');
@@ -13,6 +19,7 @@ require('dotenv').config();
 let dbType = process.env.DB_TYPE || 'sqlite';
 let mysqlPool = null;
 let sqliteDb = null;
+let pgPool = null;
 let initPromise = null;
 
 // Initialize Database connection
@@ -21,6 +28,28 @@ async function initDatabase() {
 
   initPromise = (async () => {
     try {
+      if (dbType === 'postgres' || dbType === 'supabase') {
+        try {
+          console.log('Connecting to PostgreSQL (Supabase) Database...');
+          if (!pg) {
+            pg = require('pg');
+          }
+          pgPool = new pg.Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: {
+              rejectUnauthorized: false
+            }
+          });
+          // Test connection
+          await pgPool.query('SELECT 1');
+          console.log('Successfully connected to PostgreSQL (Supabase) Database.');
+        } catch (err) {
+          console.error('PostgreSQL (Supabase) connection failed. Error details:', err.message);
+          console.warn('Falling back to SQLite database for local execution...');
+          dbType = 'sqlite';
+        }
+      }
+
       if (dbType === 'mysql') {
         try {
           console.log('Connecting to MySQL Database...');
@@ -151,6 +180,29 @@ function coerceParams(sql, params) {
 async function query(sql, params = []) {
   if (!initPromise) {
     await initDatabase();
+  }
+
+  if (dbType === 'postgres' || dbType === 'supabase') {
+    // Convert ? placeholders to $1, $2, etc. for PostgreSQL
+    let index = 1;
+    let pgSql = sql.replace(/\?/g, () => `$${index++}`);
+    const normalizedSql = sql.trim().toUpperCase();
+    if (normalizedSql.startsWith('INSERT') && !pgSql.toUpperCase().includes('RETURNING')) {
+      pgSql += ' RETURNING id';
+    }
+    const res = await pgPool.query(pgSql, params);
+    if (normalizedSql.startsWith('INSERT')) {
+      return {
+        insertId: res.rows[0]?.id || 0,
+        affectedRows: res.rowCount
+      };
+    } else if (normalizedSql.startsWith('UPDATE') || normalizedSql.startsWith('DELETE')) {
+      return {
+        insertId: 0,
+        affectedRows: res.rowCount
+      };
+    }
+    return res.rows;
   }
 
   if (dbType === 'mysql') {
@@ -361,6 +413,12 @@ async function closeDatabase() {
     await mysqlPool.end();
     console.log('Closed MySQL Database pool.');
     mysqlPool = null;
+    initPromise = null;
+  }
+  if (pgPool) {
+    await pgPool.end();
+    console.log('Closed PostgreSQL (Supabase) Database pool.');
+    pgPool = null;
     initPromise = null;
   }
   if (dbType === 'alasql') {
