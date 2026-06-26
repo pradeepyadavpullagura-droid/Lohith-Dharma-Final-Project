@@ -109,8 +109,9 @@ const bookingQueue = new AsyncQueue();
 // Helper to generate unique booking code SV-XXXX
 async function generateBookingCode() {
   try {
-    const res = await query('SELECT MAX(id) as maxId FROM bookings');
-    const nextId = (res[0].maxId || 0) + 1001;
+    const res = await query('SELECT MAX(id) as "maxId" FROM bookings');
+    const maxVal = res[0] ? (res[0].maxId || res[0].maxid || 0) : 0;
+    const nextId = maxVal + 1001;
     return `SV-${nextId}`;
   } catch (err) {
     // Fallback in case of error
