@@ -4,8 +4,8 @@ import { Lock, Mail, Building, ArrowLeft, Home, Eye, EyeOff } from 'lucide-react
 
 const Login = ({ onNavigate }) => {
   const { login, loading } = useApp();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('pullagurapradeepyadav@gmail.com');
+  const [password, setPassword] = useState('984915');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
