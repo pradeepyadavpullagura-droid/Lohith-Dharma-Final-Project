@@ -4,9 +4,21 @@ import { Lock, Mail, Building, ArrowLeft, Home, Eye, EyeOff } from 'lucide-react
 
 const Login = ({ onNavigate }) => {
   const { login, loading } = useApp();
+  const [loginRole, setLoginRole] = useState('admin'); // 'admin' or 'agent'
   const [email, setEmail] = useState('pullagurapradeepyadav@gmail.com');
   const [password, setPassword] = useState('984915');
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleRoleChange = (role) => {
+    setLoginRole(role);
+    if (role === 'admin') {
+      setEmail('pullagurapradeepyadav@gmail.com');
+      setPassword('984915');
+    } else {
+      setEmail('pradeepyadavpullagura@gmail.com');
+      setPassword('123456789');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,7 +67,33 @@ const Login = ({ onNavigate }) => {
           </button>
         </div>
 
-        <h2 className="text-xl font-bold text-white mb-6">Internal Portal Access</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Internal Portal Access</h2>
+
+        {/* Role Switcher Tabs */}
+        <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800/80 mb-6">
+          <button
+            type="button"
+            onClick={() => handleRoleChange('admin')}
+            className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              loginRole === 'admin' 
+                ? 'bg-emerald-600 text-slate-950 shadow-md' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Admin Portal
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRoleChange('agent')}
+            className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              loginRole === 'agent' 
+                ? 'bg-emerald-600 text-slate-950 shadow-md' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Sales Agent
+          </button>
+        </div>
 
         {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
