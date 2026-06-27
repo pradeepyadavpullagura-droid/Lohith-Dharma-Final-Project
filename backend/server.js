@@ -794,7 +794,7 @@ app.post('/api/agent', async (req, res) => {
 
     const agentPassword = password || 'agent123';
 
-    await query('INSERT INTO agents (name, email, phone, status, password) VALUES (?, ?, ?, "Available", ?)', [name, email, phone, agentPassword]);
+    await query("INSERT INTO agents (name, email, phone, status, password) VALUES (?, ?, ?, 'Available', ?)", [name, email, phone, agentPassword]);
     res.status(201).json({ success: true, message: 'Agent registered successfully.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

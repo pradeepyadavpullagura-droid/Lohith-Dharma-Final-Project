@@ -47,6 +47,23 @@ async function initDatabase() {
           // Test connection
           await pgPool.query('SELECT 1');
           console.log('Successfully connected to PostgreSQL (Supabase) Database.');
+
+          // Run migration to add password column if it doesn't exist
+          try {
+            console.log('Running PostgreSQL migrations...');
+            const checkColQuery = `
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'agents' AND column_name = 'password'
+            `;
+            const checkRes = await pgPool.query(checkColQuery);
+            if (checkRes.rowCount === 0) {
+              console.log("Migration: Adding 'password' column to PostgreSQL 'agents' table...");
+              await pgPool.query("ALTER TABLE agents ADD COLUMN password VARCHAR(100) DEFAULT 'agent123'");
+              console.log("Migration: 'password' column successfully added to PostgreSQL.");
+            }
+          } catch (migrationErr) {
+            console.error('Error running PostgreSQL migrations:', migrationErr.message);
+          }
         } catch (err) {
           console.error('PostgreSQL (Supabase) connection failed. Error details:', err.message);
           console.warn('Falling back to SQLite database for local execution...');
@@ -70,6 +87,19 @@ async function initDatabase() {
           // Test connection
           await mysqlPool.query('SELECT 1');
           console.log('Successfully connected to MySQL Database.');
+
+          // Run migration to add password column if it doesn't exist
+          try {
+            console.log('Running MySQL migrations...');
+            const [columns] = await mysqlPool.query("SHOW COLUMNS FROM agents LIKE 'password'");
+            if (columns.length === 0) {
+              console.log("Migration: Adding 'password' column to MySQL 'agents' table...");
+              await mysqlPool.query("ALTER TABLE agents ADD COLUMN password VARCHAR(100) DEFAULT 'agent123'");
+              console.log("Migration: 'password' column successfully added to MySQL.");
+            }
+          } catch (migrationErr) {
+            console.error('Error running MySQL migrations:', migrationErr.message);
+          }
         } catch (err) {
           console.error('MySQL connection failed. Error details:', err.message);
           console.warn('Falling back to SQLite database for local execution...');
