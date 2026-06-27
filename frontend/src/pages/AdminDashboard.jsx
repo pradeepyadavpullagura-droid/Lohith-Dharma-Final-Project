@@ -5,6 +5,19 @@ import {
   UserPlus, RefreshCw, Send, ChevronRight, MessageSquare, Trash2, Pencil 
 } from 'lucide-react';
 
+const formatTime = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  let formatted = dateStr;
+  if (typeof dateStr === 'string' && !dateStr.includes('T')) {
+    formatted = dateStr.replace(' ', 'T');
+    if (!formatted.endsWith('Z')) {
+      formatted += 'Z';
+    }
+  }
+  const date = new Date(formatted);
+  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 const AdminDashboard = ({ onViewBooking }) => {
   const { 
     bookings, stats, agents, fetchBookings, fetchDashboardStats, 
@@ -425,24 +438,28 @@ const AdminDashboard = ({ onViewBooking }) => {
             <h2 className="text-base font-bold text-white mb-1">WhatsApp Broadcast Log</h2>
             <p className="text-[10px] text-slate-400 mb-4">Simulate triggers and view sent text messages instantly.</p>
             <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-              {stats && stats.recentNotifications.map((noti) => (
-                <div key={noti.id} className="p-3 bg-slate-900/50 border border-slate-800/60 rounded-xl text-[11px] space-y-1.5">
-                  <div className="flex justify-between items-center text-[9px] font-bold text-slate-400">
-                    <span className="font-mono text-emerald-400">{noti.booking_code}</span>
-                    <span>{new Date(noti.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              {!stats || !stats.recentNotifications || stats.recentNotifications.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500 italic">No broadcast alerts sent yet.</div>
+              ) : (
+                stats.recentNotifications.map((noti) => (
+                  <div key={noti.id} className="p-3 bg-slate-900/50 border border-slate-800/60 rounded-xl text-[11px] space-y-1.5">
+                    <div className="flex justify-between items-center text-[9px] font-bold text-slate-400">
+                      <span className="font-mono text-emerald-400">{noti.booking_code}</span>
+                      <span>{formatTime(noti.sent_at)}</span>
+                    </div>
+                    <p className="text-white leading-relaxed font-light">{noti.message}</p>
+                    <div className="flex justify-between items-center pt-1.5 border-t border-slate-850/80">
+                      <span className="text-[9px] text-slate-500">{noti.recipient}</span>
+                      <button
+                        onClick={() => sendWhatsAppSim(noti.recipient, noti.message)}
+                        className="text-[9px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                      >
+                        <Send className="w-2.5 h-2.5 text-emerald-400" /> Send via Web API
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-white leading-relaxed font-light">{noti.message}</p>
-                  <div className="flex justify-between items-center pt-1.5 border-t border-slate-850/80">
-                    <span className="text-[9px] text-slate-500">{noti.recipient}</span>
-                    <button
-                      onClick={() => sendWhatsAppSim(noti.recipient, noti.message)}
-                      className="text-[9px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
-                    >
-                      <Send className="w-2.5 h-2.5 text-emerald-400" /> Send via Web API
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

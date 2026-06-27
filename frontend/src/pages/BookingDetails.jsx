@@ -5,6 +5,19 @@ import {
   User, Phone, Mail, Bell, MessageCircle, Trash2, Pencil 
 } from 'lucide-react';
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  let formatted = dateStr;
+  if (typeof dateStr === 'string' && !dateStr.includes('T')) {
+    formatted = dateStr.replace(' ', 'T');
+    if (!formatted.endsWith('Z')) {
+      formatted += 'Z';
+    }
+  }
+  const date = new Date(formatted);
+  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+};
+
 const BookingDetails = ({ bookingId, onBack }) => {
   const { fetchBookingDetails, deleteBooking, updateBooking, user, loading } = useApp();
   const [data, setData] = useState(null);
@@ -232,7 +245,7 @@ const BookingDetails = ({ bookingId, onBack }) => {
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-white font-bold">Status: {log.status}</span>
                       <span className="text-[10px] text-slate-500">
-                        {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        {formatDateTime(log.created_at)}
                       </span>
                     </div>
                     <div className="text-[10px] text-slate-400">
@@ -278,7 +291,7 @@ const BookingDetails = ({ bookingId, onBack }) => {
                     <p className="text-slate-300 font-light leading-relaxed">{noti.message}</p>
                     <div className="flex justify-between text-[9px] text-slate-500 border-t border-slate-850/60 pt-1.5">
                       <span>To: {noti.recipient}</span>
-                      <span>Dispatch: {new Date(noti.sent_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      <span>Dispatch: {formatDateTime(noti.sent_at)}</span>
                     </div>
                   </div>
                 ))
