@@ -184,7 +184,10 @@ const AdminDashboard = ({ onViewBooking }) => {
 
   // WhatsApp Web Redirection helper
   const sendWhatsAppSim = (recipient, message) => {
-    const cleaned = recipient.replace(/[^\d+]/g, '');
+    let cleaned = recipient.replace(/[^\d]/g, '');
+    if (cleaned.length === 10) {
+      cleaned = '91' + cleaned;
+    }
     const url = `https://api.whatsapp.com/send?phone=${cleaned}&text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };

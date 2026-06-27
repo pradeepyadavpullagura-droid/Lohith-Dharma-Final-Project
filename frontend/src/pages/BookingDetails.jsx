@@ -289,8 +289,23 @@ const BookingDetails = ({ bookingId, onBack }) => {
                       </span>
                     </div>
                     <p className="text-slate-300 font-light leading-relaxed">{noti.message}</p>
-                    <div className="flex justify-between text-[9px] text-slate-500 border-t border-slate-850/60 pt-1.5">
+                    <div className="flex justify-between items-center text-[9px] text-slate-500 border-t border-slate-850/60 pt-1.5">
                       <span>To: {noti.recipient}</span>
+                      {noti.type === 'WhatsApp' && (
+                        <button
+                          onClick={() => {
+                            let cleaned = noti.recipient.replace(/[^\d]/g, '');
+                            if (cleaned.length === 10) {
+                              cleaned = '91' + cleaned;
+                            }
+                            const url = `https://api.whatsapp.com/send?phone=${cleaned}&text=${encodeURIComponent(noti.message)}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="text-[9px] text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <MessageCircle className="w-2.5 h-2.5 text-emerald-400" /> Send via Web API
+                        </button>
+                      )}
                       <span>Dispatch: {formatDateTime(noti.sent_at)}</span>
                     </div>
                   </div>
